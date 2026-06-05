@@ -18,6 +18,10 @@ msbuild*.log
 Thumbs.db
 desktop.ini
 
+# Local SimHub install snapshots / archives — may contain REAL webhook URLs. Never commit.
+*.zip
+/SimHub/
+
 # Local-only planning docs (superpowers specs/plans) — not part of the repo
 docs/superpowers/
 
