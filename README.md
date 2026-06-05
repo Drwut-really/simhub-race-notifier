@@ -4,7 +4,7 @@ Press a bound steering-wheel button → fire a preset message to your team on **
 (Telegram support is planned for a later version). Built for hands-on-wheel team radio:
 "Pitting this lap", "Need a gap", "GG", etc.
 
-## Features (v1)
+## Features (v0.1)
 - **10 message slots**, each bindable to any controller/wheel button via SimHub's mapper.
 - **Multiple Discord destinations**; each slot targets the destination(s) you choose.
 - **Configurable sender prefix** (e.g. `[John] Pitting this lap`).
