@@ -60,16 +60,38 @@ namespace RaceNotifier.Notifications
         {
             var settings = _getSettings();
             if (settings == null)
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier] SendMessage" + idx + " fired, but settings are null — ignored.");
                 return;
+            }
             settings.EnsureInitialized();
+
+            // One line per press so the whole path is visible in SimHub.txt.
+            SimHub.Logging.Current.Info("[RaceNotifier] SendMessage" + idx + " fired (button press received).");
 
             // Master switch: when off, drop everything (the plugin stays loaded).
             if (!settings.PluginEnabled)
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> ignored: plugin is OFF (master switch).");
                 return;
+            }
 
             var preset = settings.Presets.FirstOrDefault(p => p != null && p.ActionIndex == idx);
-            if (preset == null || !preset.Enabled || string.IsNullOrWhiteSpace(preset.Text))
+            if (preset == null)
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> ignored: no message has ActionIndex " + idx + ".");
                 return;
+            }
+            if (!preset.Enabled)
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> ignored: message " + idx + " (\"" + preset.Name + "\") is NOT enabled. Turn on its Enabled toggle.");
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(preset.Text))
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> ignored: message " + idx + " has no text.");
+                return;
+            }
 
             // Per-preset cooldown, keyed by the stable ActionIndex.
             lock (_cooldownLock)
@@ -77,6 +99,7 @@ namespace RaceNotifier.Notifications
                 if (_lastFireUtc.TryGetValue(idx, out var last) &&
                     (DateTime.UtcNow - last).TotalSeconds < preset.CooldownSeconds)
                 {
+                    SimHub.Logging.Current.Info("[RaceNotifier]   -> ignored: message " + idx + " is on cooldown (" + preset.CooldownSeconds + "s).");
                     return;
                 }
                 _lastFireUtc[idx] = DateTime.UtcNow;
@@ -86,8 +109,12 @@ namespace RaceNotifier.Notifications
                 .Where(d => preset.TargetDestinationIds.Contains(d.Id))
                 .ToList();
             if (targets.Count == 0)
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> ignored: message " + idx + " has no destination selected (tick a box under \"Send to\").");
                 return;
+            }
 
+            SimHub.Logging.Current.Info("[RaceNotifier]   -> enqueued message " + idx + " to " + targets.Count + " destination(s).");
             _queue.Add(new Job { Message = ApplyPrefix(settings, preset.Text), Destinations = targets });
         }
 
@@ -150,11 +177,13 @@ namespace RaceNotifier.Notifications
             if (allOk)
             {
                 LastStatus = "OK";
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> sent OK to " + job.Destinations.Count + " destination(s).");
                 OnSent?.Invoke(job.Message);
             }
             else
             {
                 LastStatus = "Failed";
+                SimHub.Logging.Current.Info("[RaceNotifier]   -> send FAILED (see preceding error). Status set to Failed.");
                 OnFailed?.Invoke(job.Message);
             }
         }

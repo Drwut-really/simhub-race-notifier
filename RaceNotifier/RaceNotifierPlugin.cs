@@ -61,6 +61,9 @@ namespace RaceNotifier
             for (int i = 1; i <= ceiling; i++)
                 RegisterAction(i);
             HighestRegisteredActionIndex = ceiling;
+
+            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable actions (SendMessage1.." + ceiling + "); "
+                + Settings.Presets.Count + " message(s) configured, PluginEnabled=" + Settings.PluginEnabled + ".");
         }
 
         /// <summary>Registers the bindable SimHub action for one slot index.</summary>
