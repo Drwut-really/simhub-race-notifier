@@ -1,8 +1,8 @@
 # Race Notifier — SimHub plugin
 
-Press a bound steering-wheel button → fire a preset message to your team on **Discord**
-(Telegram support is planned for a later version). Built for hands-on-wheel team radio:
-"Pitting this lap", "Need a gap", "GG", etc.
+Press a bound steering-wheel button → fire a preset message to your team on **Discord** or
+any **custom webhook** (Telegram support is planned for a later version). Built for
+hands-on-wheel team radio: "Pitting this lap", "Need a gap", "GG", etc.
 
 ## Features (v0.1.2)
 - **Unlimited messages** — add/remove as many as you like; each is bindable to any
@@ -13,7 +13,7 @@ Press a bound steering-wheel button → fire a preset message to your team on **
 - **Master on/off switch** — mute the whole plugin (button sends *and* tests) without unloading it.
 - **Compact, reorderable UI** — collapsible message rows with ↑/↓ ordering and inline validation
   warnings (missing text / destination / webhook).
-- **Multiple Discord destinations**; each message targets the destination(s) you choose.
+- **Multiple destinations** — Discord and/or custom webhooks; each message targets the destination(s) you choose.
 - **Configurable sender prefix** (e.g. `[John] Pitting this lap`).
 - **Per-message cooldown** (default 3s) to avoid double-sends / rate limits.
 - **One automatic retry** on a failed send.
@@ -55,6 +55,16 @@ Restart SimHub and enable the plugin when prompted.
    plugin panel or under SimHub's **Controls & Events**. It fires on a plain press, so any press
    type works.
 6. Press the button → the message appears in your Discord channel.
+
+## Setup (custom webhook)
+Besides Discord, a destination can be a **Custom webhook** — any HTTP endpoint you choose.
+1. On the **Destinations** tab, set the type dropdown to **Custom webhook** and click **+ Add destination**.
+2. Paste the endpoint URL and pick a **Body format**:
+   - **JSON (`{"content": message}`)** — default. Works with Discord-style and other JSON `content` endpoints.
+   - **Plain text** — POSTs the raw message as `text/plain`, for endpoints that accept raw bodies (e.g. webhook.site).
+3. Target the webhook from a message just like a Discord destination. The optional sender
+   prefix (General tab) applies to webhook messages too. A non-2xx response is logged with its
+   status code (the URL is never logged).
 
 ## Security
 Webhook URLs (and later Telegram tokens) are **secrets**. They are stored by SimHub in
