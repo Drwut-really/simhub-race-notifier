@@ -10,7 +10,7 @@ namespace RaceNotifier.Notifications
 {
     /// <summary>
     /// Owns the HttpClient and a single background worker. Button callbacks enqueue work
-    /// here so sending never blocks SimHub's UI/data threads. Applies per-slot cooldown,
+    /// here so sending never blocks SimHub's UI/data threads. Applies per-preset cooldown,
     /// retries once on failure, then reports status + fires events.
     /// </summary>
     public class NotificationDispatcher : IDisposable
@@ -55,50 +55,58 @@ namespace RaceNotifier.Notifications
             _worker.Start();
         }
 
-        /// <summary>Called from the SimHub action callback. Slot is 1-based.</summary>
-        public void Fire(int slot)
+        /// <summary>Called from the SimHub action callback. <paramref name="idx"/> is the preset's ActionIndex.</summary>
+        public void FireByActionIndex(int idx)
         {
             var settings = _getSettings();
             if (settings == null)
                 return;
             settings.EnsureInitialized();
 
-            int idx = slot - 1;
-            if (idx < 0 || idx >= settings.Slots.Count)
+            // Master switch: when off, drop everything (the plugin stays loaded).
+            if (!settings.PluginEnabled)
                 return;
 
-            var s = settings.Slots[idx];
-            if (!s.Enabled || string.IsNullOrWhiteSpace(s.Text))
+            var preset = settings.Presets.FirstOrDefault(p => p != null && p.ActionIndex == idx);
+            if (preset == null || !preset.Enabled || string.IsNullOrWhiteSpace(preset.Text))
                 return;
 
-            // Per-slot cooldown.
+            // Per-preset cooldown, keyed by the stable ActionIndex.
             lock (_cooldownLock)
             {
-                if (_lastFireUtc.TryGetValue(slot, out var last) &&
-                    (DateTime.UtcNow - last).TotalSeconds < s.CooldownSeconds)
+                if (_lastFireUtc.TryGetValue(idx, out var last) &&
+                    (DateTime.UtcNow - last).TotalSeconds < preset.CooldownSeconds)
                 {
                     return;
                 }
-                _lastFireUtc[slot] = DateTime.UtcNow;
+                _lastFireUtc[idx] = DateTime.UtcNow;
             }
 
             var targets = settings.Destinations
-                .Where(d => s.TargetDestinationIds.Contains(d.Id))
+                .Where(d => preset.TargetDestinationIds.Contains(d.Id))
                 .ToList();
             if (targets.Count == 0)
                 return;
 
-            _queue.Add(new Job { Message = ApplyPrefix(settings, s.Text), Destinations = targets });
+            _queue.Add(new Job { Message = ApplyPrefix(settings, preset.Text), Destinations = targets });
         }
 
-        /// <summary>Fire-and-forget a one-off test message to a single destination.</summary>
+        /// <summary>
+        /// Fire-and-forget a one-off test message to a single destination.
+        /// Honors the master switch: when the plugin is disabled, tests are muted too.
+        /// </summary>
         public void SendTest(Destination destination, string message)
         {
             if (destination == null)
                 return;
+
+            var settings = _getSettings();
+            if (settings != null && !settings.PluginEnabled)
+                return;
+
             _queue.Add(new Job
             {
-                Message = ApplyPrefix(_getSettings(), message),
+                Message = ApplyPrefix(settings, message),
                 Destinations = new List<Destination> { destination }
             });
         }

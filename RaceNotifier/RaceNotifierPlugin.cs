@@ -1,3 +1,4 @@
+using System;
 using System.Windows.Controls;
 using System.Windows.Media;
 using GameReaderCommon;
@@ -22,6 +23,18 @@ namespace RaceNotifier
 
         public string LeftMenuTitle => "Race Notifier";
 
+        /// <summary>Bindable button slots pre-registered on a fresh install.</summary>
+        public const int StartPool = 10;
+
+        /// <summary>Extra slots registered each time the pool is exhausted at runtime.</summary>
+        public const int GrowBy = 3;
+
+        /// <summary>Highest action index actually registered via AddAction this session.</summary>
+        public int HighestRegisteredActionIndex { get; private set; }
+
+        /// <summary>True once a runtime AddAction was needed; the UI then shows a restart banner.</summary>
+        public bool PendingRestart { get; private set; }
+
         public void Init(PluginManager pluginManager)
         {
             SimHub.Logging.Current.Info("[RaceNotifier] Starting plugin");
@@ -41,14 +54,57 @@ namespace RaceNotifier
             this.AttachDelegate("LastSendStatus", () => Dispatcher.LastStatus);
             this.AttachDelegate("LastSendMessage", () => Dispatcher.LastMessage);
 
-            // Register one bindable action per slot -> "RaceNotifier.SendMessage1..10".
-            for (int i = 1; i <= RaceNotifierSettings.SlotCount; i++)
+            // Pre-register a contiguous pool of bindable actions "RaceNotifier.SendMessage<n>".
+            // Start at StartPool (10) on a fresh install, otherwise keep GrowBy spares above the
+            // highest used slot so adding a message rarely needs a SimHub restart.
+            int ceiling = Math.Max(StartPool, Settings.MaxActionIndex() + GrowBy);
+            for (int i = 1; i <= ceiling; i++)
+                RegisterAction(i);
+            HighestRegisteredActionIndex = ceiling;
+        }
+
+        /// <summary>Registers the bindable SimHub action for one slot index.</summary>
+        private void RegisterAction(int idx)
+        {
+            int captured = idx; // capture for the closure
+            this.AddAction(
+                actionName: "SendMessage" + captured,
+                actionStart: (a, b) => Dispatcher.FireByActionIndex(captured));
+        }
+
+        /// <summary>
+        /// Ensures an action exists for <paramref name="idx"/>. Returns true if it was already in the
+        /// pre-registered pool (immediately bindable). If it overflows the pool, the gap is registered
+        /// best-effort at runtime — which may not bind until a SimHub restart — so PendingRestart is set.
+        /// Call on the UI thread (the settings panel does).
+        /// </summary>
+        public bool AddActionForIndex(int idx)
+        {
+            if (idx <= HighestRegisteredActionIndex)
+                return true; // already pooled -> bindable now, no restart needed
+
+            try
             {
-                int slot = i; // capture
-                this.AddAction(
-                    actionName: "SendMessage" + slot,
-                    actionStart: (a, b) => Dispatcher.Fire(slot));
+                // Grow the pool to keep it contiguous: register up to idx, then GrowBy-1 spares beyond.
+                int newCeiling = idx + (GrowBy - 1);
+                for (int i = HighestRegisteredActionIndex + 1; i <= newCeiling; i++)
+                    RegisterAction(i);
+                HighestRegisteredActionIndex = newCeiling;
             }
+            catch (Exception ex)
+            {
+                SimHub.Logging.Current.Info("[RaceNotifier] Runtime AddAction failed for " + idx + ": " + ex);
+            }
+
+            PendingRestart = true;
+            return false;
+        }
+
+        /// <summary>Asks SimHub to close and relaunch so newly added actions become bindable.</summary>
+        public void RestartSimHub()
+        {
+            try { PluginManager?.RequestApplicationExit(true); }
+            catch (Exception ex) { SimHub.Logging.Current.Info("[RaceNotifier] Restart request failed: " + ex); }
         }
 
         public void End(PluginManager pluginManager)
