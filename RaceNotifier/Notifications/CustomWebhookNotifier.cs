@@ -23,10 +23,10 @@ namespace RaceNotifier.Notifications
 
         public DestinationType Type => DestinationType.CustomWebhook;
 
-        public async Task<bool> SendAsync(Destination destination, string message)
+        public async Task<SendOutcome> SendAsync(Destination destination, string message)
         {
             if (destination == null || string.IsNullOrWhiteSpace(destination.WebhookUrl))
-                return false;
+                return SendOutcome.PermanentFailure;
 
             StringContent content;
             if (destination.WebhookBodyFormat == WebhookBodyFormat.Json)
@@ -43,12 +43,11 @@ namespace RaceNotifier.Notifications
             using (var resp = await _http.PostAsync(destination.WebhookUrl, content).ConfigureAwait(false))
             {
                 var code = (int)resp.StatusCode;
-                if (code >= 200 && code < 300)
-                    return true;
-
-                SimHub.Logging.Current.Info(
-                    "[RaceNotifier] Custom webhook '" + (destination.Name ?? "") + "' returned HTTP " + code + ".");
-                return false;
+                var outcome = HttpSendClassifier.FromStatusCode(code);
+                if (outcome != SendOutcome.Success)
+                    SimHub.Logging.Current.Info(
+                        "[RaceNotifier] Custom webhook '" + (destination.Name ?? "") + "' returned HTTP " + code + ".");
+                return outcome;
             }
         }
     }

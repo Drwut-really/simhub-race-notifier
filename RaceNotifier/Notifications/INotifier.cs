@@ -11,7 +11,10 @@ namespace RaceNotifier.Notifications
     {
         DestinationType Type { get; }
 
-        /// <summary>Returns true on successful delivery.</summary>
-        Task<bool> SendAsync(Destination destination, string message);
+        /// <summary>
+        /// Delivers a message and reports the outcome: success, a transient failure worth retrying,
+        /// or a permanent failure that a retry cannot fix.
+        /// </summary>
+        Task<SendOutcome> SendAsync(Destination destination, string message);
     }
 }

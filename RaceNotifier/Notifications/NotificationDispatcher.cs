@@ -195,13 +195,16 @@ namespace RaceNotifier.Notifications
 
         private bool TrySendWithRetry(INotifier notifier, Destination dest, string message)
         {
-            if (TrySendOnce(notifier, dest, message))
+            var outcome = TrySendOnce(notifier, dest, message);
+            if (outcome == SendOutcome.Success)
                 return true;
-            Thread.Sleep(1000); // one quick retry
-            return TrySendOnce(notifier, dest, message);
+            if (outcome == SendOutcome.PermanentFailure)
+                return false; // deterministic client/config error — a second identical request can't help
+            Thread.Sleep(1000); // one quick retry, transient failures only
+            return TrySendOnce(notifier, dest, message) == SendOutcome.Success;
         }
 
-        private bool TrySendOnce(INotifier notifier, Destination dest, string message)
+        private SendOutcome TrySendOnce(INotifier notifier, Destination dest, string message)
         {
             try
             {
@@ -209,8 +212,9 @@ namespace RaceNotifier.Notifications
             }
             catch (Exception ex)
             {
+                // Network/transport error — transient by nature, so allow the one retry.
                 SimHub.Logging.Current.Info("[RaceNotifier] Send failed to '" + dest.Name + "': " + ex.Message);
-                return false;
+                return SendOutcome.TransientFailure;
             }
         }
 

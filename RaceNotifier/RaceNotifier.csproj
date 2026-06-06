@@ -75,6 +75,7 @@
     <Compile Include="Notifications\DiscordNotifier.cs" />
     <Compile Include="Notifications\INotifier.cs" />
     <Compile Include="Notifications\NotificationDispatcher.cs" />
+    <Compile Include="Notifications\SendOutcome.cs" />
     <Compile Include="RaceNotifierPlugin.cs" />
     <Compile Include="Settings\Destination.cs" />
     <Compile Include="Settings\Preset.cs" />
