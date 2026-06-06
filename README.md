@@ -15,8 +15,8 @@ Press a bound steering-wheel button → fire a preset message to your team on **
 - **Configurable sender prefix** (e.g. `[John] Pitting this lap`).
 - **Per-message cooldown** (default 3s) to avoid double-sends / rate limits.
 - **One automatic retry** on a failed send.
-- **Dashboard properties** `RaceNotifier.LastSendStatus` / `RaceNotifier.LastSendMessage`
-  and **events** `MessageSent` / `MessageFailed` (bind to SimHub sounds or LEDs).
+- **Dashboard properties** `RaceNotifierPlugin.LastSendStatus` / `RaceNotifierPlugin.LastSendMessage`
+  and **events** `RaceNotifierPlugin.MessageSent` / `RaceNotifierPlugin.MessageFailed` (bind to SimHub sounds or LEDs).
 - **Native SimHub UI** (uses SimHub's own styled WPF controls).
 
 ## Requirements
@@ -49,7 +49,7 @@ Restart SimHub and enable the plugin when prompted.
 2. In SimHub: open **Race Notifier** in the left menu.
 3. Add a **Destination** (type Discord) and paste the webhook URL.
 4. Click **+ Add message**: enable it, type the text, choose the destination(s), set a cooldown.
-5. Bind the message's action (`RaceNotifier.SendMessageN`) to a wheel button — either in the
+5. Bind the message's action (`RaceNotifierPlugin.SendMessageN`) to a wheel button — either in the
    plugin panel or under SimHub's **Controls & Events**.
 6. Press the button → the message appears in your Discord channel.
 

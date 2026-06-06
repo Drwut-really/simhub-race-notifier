@@ -55,8 +55,12 @@ namespace RaceNotifier.Notifications
             _worker.Start();
         }
 
-        /// <summary>Called from the SimHub action callback. <paramref name="idx"/> is the preset's ActionIndex.</summary>
-        public void FireByActionIndex(int idx)
+        /// <summary>
+        /// Called from the SimHub action callback. <paramref name="idx"/> is the preset's ActionIndex.
+        /// <paramref name="phase"/> is "press" or "release" — both are wired so the action fires for
+        /// any binding press type; the cooldown below collapses the press/release pair into one send.
+        /// </summary>
+        public void FireByActionIndex(int idx, string phase = "press")
         {
             var settings = _getSettings();
             if (settings == null)
@@ -66,8 +70,8 @@ namespace RaceNotifier.Notifications
             }
             settings.EnsureInitialized();
 
-            // One line per press so the whole path is visible in SimHub.txt.
-            SimHub.Logging.Current.Info("[RaceNotifier] SendMessage" + idx + " fired (button press received).");
+            // One line per press/release so the whole path is visible in SimHub.txt.
+            SimHub.Logging.Current.Info("[RaceNotifier] SendMessage" + idx + " fired (" + phase + ").");
 
             // Master switch: when off, drop everything (the plugin stays loaded).
             if (!settings.PluginEnabled)

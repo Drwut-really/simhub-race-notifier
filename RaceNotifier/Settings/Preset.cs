@@ -4,7 +4,7 @@ namespace RaceNotifier.Settings
 {
     /// <summary>
     /// One user-created message preset. <see cref="ActionIndex"/> is the stable identity:
-    /// it maps to the SimHub action "RaceNotifier.SendMessage&lt;ActionIndex&gt;" and is the
+    /// it maps to the SimHub action "RaceNotifierPlugin.SendMessage&lt;ActionIndex&gt;" and is the
     /// per-preset cooldown key. List order is purely cosmetic.
     /// </summary>
     public class Preset

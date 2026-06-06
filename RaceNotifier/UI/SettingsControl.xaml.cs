@@ -332,7 +332,7 @@ namespace RaceNotifier.UI
             headerSp.Children.Add(titleText);
             headerSp.Children.Add(new TextBlock
             {
-                Text = "  (RaceNotifier.SendMessage" + idx + ")",
+                Text = "  (" + _plugin.ActionPrefix + ".SendMessage" + idx + ")",
                 Opacity = 0.6,
                 VerticalAlignment = VerticalAlignment.Center
             });
@@ -509,7 +509,7 @@ namespace RaceNotifier.UI
             {
                 var editor = new SimHub.Plugins.UI.ControlsEditor
                 {
-                    ActionName = "RaceNotifier.SendMessage" + idx,
+                    ActionName = _plugin.ActionPrefix + ".SendMessage" + idx,
                     FriendlyName = "Send message " + idx
                 };
                 holder.Children.Add(editor);
@@ -518,7 +518,7 @@ namespace RaceNotifier.UI
             {
                 holder.Children.Add(new TextBlock
                 {
-                    Text = "Bind action 'RaceNotifier.SendMessage" + idx + "' under SimHub > Controls & Events.",
+                    Text = "Bind action '" + _plugin.ActionPrefix + ".SendMessage" + idx + "' under SimHub > Controls & Events.",
                     TextWrapping = TextWrapping.Wrap,
                     Opacity = 0.8
                 });

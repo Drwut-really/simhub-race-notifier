@@ -59,7 +59,7 @@
                                 <TextBox x:Name="SenderNameBox" Width="260" HorizontalAlignment="Left" />
                                 <styles:SHSectionSeparator />
                                 <TextBlock TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Dashboard properties: RaceNotifier.LastSendStatus, RaceNotifier.LastSendMessage. Events: MessageSent, MessageFailed (bind to sounds/LEDs in SimHub)." />
+                                           Text="Dashboard properties: RaceNotifierPlugin.LastSendStatus, RaceNotifierPlugin.LastSendMessage. Events: RaceNotifierPlugin.MessageSent, RaceNotifierPlugin.MessageFailed (bind to sounds/LEDs in SimHub)." />
                                 <styles:SHSectionSeparator />
                                 <styles:SHButtonPrimary x:Name="RestartButton"
                                                         HorizontalAlignment="Left" Margin="0,8,0,0"

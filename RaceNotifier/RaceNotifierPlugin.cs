@@ -35,6 +35,13 @@ namespace RaceNotifier
         /// <summary>True once a runtime AddAction was needed; the UI then shows a restart banner.</summary>
         public bool PendingRestart { get; private set; }
 
+        /// <summary>
+        /// SimHub prefixes every plugin action with the plugin's CLASS name, so the real bindable
+        /// action names are "&lt;ActionPrefix&gt;.SendMessageN" (e.g. "RaceNotifierPlugin.SendMessage1").
+        /// The settings UI must bind to exactly this, or the button press hits a non-existent action.
+        /// </summary>
+        public string ActionPrefix => GetType().Name;
+
         public void Init(PluginManager pluginManager)
         {
             SimHub.Logging.Current.Info("[RaceNotifier] Starting plugin");
@@ -54,7 +61,7 @@ namespace RaceNotifier
             this.AttachDelegate("LastSendStatus", () => Dispatcher.LastStatus);
             this.AttachDelegate("LastSendMessage", () => Dispatcher.LastMessage);
 
-            // Pre-register a contiguous pool of bindable actions "RaceNotifier.SendMessage<n>".
+            // Pre-register a contiguous pool of bindable actions "RaceNotifierPlugin.SendMessage<n>".
             // Start at StartPool (10) on a fresh install, otherwise keep GrowBy spares above the
             // highest used slot so adding a message rarely needs a SimHub restart.
             int ceiling = Math.Max(StartPool, Settings.MaxActionIndex() + GrowBy);
@@ -62,17 +69,25 @@ namespace RaceNotifier
                 RegisterAction(i);
             HighestRegisteredActionIndex = ceiling;
 
-            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable actions (SendMessage1.." + ceiling + "); "
-                + Settings.Presets.Count + " message(s) configured, PluginEnabled=" + Settings.PluginEnabled + ".");
+            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable actions as '"
+                + ActionPrefix + ".SendMessage1.." + ceiling + "'. " + Settings.Presets.Count
+                + " message(s) configured, PluginEnabled=" + Settings.PluginEnabled
+                + ". Bind a wheel button to one of those actions with a 'Short press' / 'Pressed' press type.");
         }
 
-        /// <summary>Registers the bindable SimHub action for one slot index.</summary>
+        /// <summary>
+        /// Registers the bindable SimHub action for one slot index. We handle BOTH press
+        /// (actionStart) and release (actionEnd) so the message fires regardless of the press
+        /// type SimHub/ControlMapper assigns to the binding (ShortPress, Pressed, Released,
+        /// ShortAndLongPress, …). The per-message cooldown de-duplicates the press/release pair.
+        /// </summary>
         private void RegisterAction(int idx)
         {
             int captured = idx; // capture for the closure
             this.AddAction(
                 actionName: "SendMessage" + captured,
-                actionStart: (a, b) => Dispatcher.FireByActionIndex(captured));
+                actionStart: (a, b) => Dispatcher.FireByActionIndex(captured, "press"),
+                actionEnd: (a, b) => Dispatcher.FireByActionIndex(captured, "release"));
         }
 
         /// <summary>
