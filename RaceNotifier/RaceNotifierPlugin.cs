@@ -69,10 +69,10 @@ namespace RaceNotifier
                 RegisterAction(i);
             HighestRegisteredActionIndex = ceiling;
 
-            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable actions as '"
+            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable inputs as '"
                 + ActionPrefix + ".SendMessage1.." + ceiling + "'. " + Settings.Presets.Count
                 + " message(s) configured, PluginEnabled=" + Settings.PluginEnabled
-                + ". Bind a wheel button to one of those actions with a 'Short press' / 'Pressed' press type.");
+                + ". Bind a wheel button to one of those (raw press; SimHub press type does not apply to inputs).");
         }
 
         /// <summary>
@@ -84,10 +84,13 @@ namespace RaceNotifier
         private void RegisterAction(int idx)
         {
             int captured = idx; // capture for the closure
-            this.AddAction(
-                actionName: "SendMessage" + captured,
-                actionStart: (a, b) => Dispatcher.FireByActionIndex(captured, "press"),
-                actionEnd: (a, b) => Dispatcher.FireByActionIndex(captured, "release"));
+            // INPUT MAPPING (raw pressed/released), NOT an Action. Input mappings fire on a plain
+            // button press and are NOT subject to SimHub's "press type" system (the trap where a
+            // binding left on "Short and long press" silently never fires a normal Action).
+            this.AddInputMapping(
+                inputName: "SendMessage" + captured,
+                inputPressed: (a, b) => Dispatcher.FireByActionIndex(captured, "press"),
+                inputReleased: (a, b) => { });
         }
 
         /// <summary>

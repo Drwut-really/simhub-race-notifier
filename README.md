@@ -4,10 +4,12 @@ Press a bound steering-wheel button → fire a preset message to your team on **
 (Telegram support is planned for a later version). Built for hands-on-wheel team radio:
 "Pitting this lap", "Need a gap", "GG", etc.
 
-## Features (v0.1.1)
+## Features (v0.1.2)
 - **Unlimited messages** — add/remove as many as you like; each is bindable to any
   controller/wheel button via SimHub's mapper. Button slots are pre-registered in a pool that
   grows on demand; a one-click **Restart SimHub** finishes binding brand-new buttons when needed.
+- **Binds as a SimHub input** — fires on a plain button press, so **any press type works** (no
+  "Short and long press" gotcha, and ControlMapper roles trigger it fine).
 - **Master on/off switch** — mute the whole plugin (button sends *and* tests) without unloading it.
 - **Compact, reorderable UI** — collapsible message rows with ↑/↓ ordering and inline validation
   warnings (missing text / destination / webhook).
@@ -25,7 +27,7 @@ Press a bound steering-wheel button → fire a preset message to your team on **
   (includes MSBuild + the .NET Framework 4.8 targeting pack).
 
 ## Install (compiled — no build)
-1. Download `RaceNotifier-v0.1.1.zip` from the [latest Release](../../releases/latest).
+1. Download `RaceNotifier-v0.1.2.zip` from the [latest Release](../../releases/latest).
 2. Unzip and copy `RaceNotifier.dll` into your SimHub folder
    (e.g. `C:\Program Files (x86)\SimHub\`).
 3. Restart SimHub and enable **Race Notifier** when prompted.
@@ -49,8 +51,9 @@ Restart SimHub and enable the plugin when prompted.
 2. In SimHub: open **Race Notifier** in the left menu.
 3. Add a **Destination** (type Discord) and paste the webhook URL.
 4. Click **+ Add message**: enable it, type the text, choose the destination(s), set a cooldown.
-5. Bind the message's action (`RaceNotifierPlugin.SendMessageN`) to a wheel button — either in the
-   plugin panel or under SimHub's **Controls & Events**.
+5. Bind the message's input (`RaceNotifierPlugin.SendMessageN`) to a wheel button — either in the
+   plugin panel or under SimHub's **Controls & Events**. It fires on a plain press, so any press
+   type works.
 6. Press the button → the message appears in your Discord channel.
 
 ## Security
