@@ -18,6 +18,9 @@ msbuild*.log
 Thumbs.db
 desktop.ini
 
+# Local-only planning docs (superpowers specs/plans) — not part of the repo
+docs/superpowers/
+
 # NEVER commit secrets. Discord webhook URLs, Telegram bot tokens, and chat ids
 # are stored at runtime in SimHub\PluginsData\Common (outside this repo) and must
 # not be added here.
