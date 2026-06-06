@@ -23,7 +23,7 @@ namespace RaceNotifier.Settings
                 return "No destination selected.";
 
             var selected = (destinations ?? new List<Destination>())
-                .Where(d => preset.TargetDestinationIds.Contains(d.Id))
+                .Where(d => d != null && preset.TargetDestinationIds.Contains(d.Id))
                 .ToList();
 
             if (selected.Count == 0)
@@ -31,7 +31,7 @@ namespace RaceNotifier.Settings
 
             // Dispatcher sends to EVERY selected target and one unusable target fails the
             // whole send, so warn if ANY selected destination lacks a usable URL.
-            if (selected.Any(d => d == null || !d.HasUsableTarget))
+            if (selected.Any(d => !d.HasUsableTarget))
                 return "A selected destination has no URL set.";
 
             return null;

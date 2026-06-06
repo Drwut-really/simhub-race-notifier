@@ -76,10 +76,10 @@ namespace RaceNotifier
         }
 
         /// <summary>
-        /// Registers the bindable SimHub action for one slot index. We handle BOTH press
-        /// (actionStart) and release (actionEnd) so the message fires regardless of the press
-        /// type SimHub/ControlMapper assigns to the binding (ShortPress, Pressed, Released,
-        /// ShortAndLongPress, …). The per-message cooldown de-duplicates the press/release pair.
+        /// Registers the bindable SimHub INPUT for one slot index. Only the press fires the
+        /// message; the release is an intentional no-op. Because this is an input mapping (not an
+        /// Action), it fires on a raw button press and SimHub/ControlMapper "press type"
+        /// (ShortPress, ShortAndLongPress, …) does not apply.
         /// </summary>
         private void RegisterAction(int idx)
         {

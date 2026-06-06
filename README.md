@@ -57,7 +57,8 @@ Restart SimHub and enable the plugin when prompted.
 6. Press the button → the message appears in your Discord channel.
 
 ## Setup (custom webhook)
-Besides Discord, a destination can be a **Custom webhook** — any HTTP endpoint you choose.
+Besides Discord, a destination can be a **Custom webhook** — any HTTP endpoint that accepts an
+unauthenticated `POST` (no custom headers, auth, or per-field templating).
 1. On the **Destinations** tab, set the type dropdown to **Custom webhook** and click **+ Add destination**.
 2. Paste the endpoint URL and pick a **Body format**:
    - **JSON (`{"content": message}`)** — default. Works with Discord-style and other JSON `content` endpoints.
