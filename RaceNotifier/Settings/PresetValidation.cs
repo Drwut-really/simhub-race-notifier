@@ -29,8 +29,10 @@ namespace RaceNotifier.Settings
             if (selected.Count == 0)
                 return "No destination selected.";
 
-            if (selected.All(d => string.IsNullOrWhiteSpace(d.DiscordWebhookUrl)))
-                return "Selected destination has no webhook URL.";
+            // Dispatcher sends to EVERY selected target and one unusable target fails the
+            // whole send, so warn if ANY selected destination lacks a usable URL.
+            if (selected.Any(d => d == null || !d.HasUsableTarget))
+                return "A selected destination has no URL set.";
 
             return null;
         }

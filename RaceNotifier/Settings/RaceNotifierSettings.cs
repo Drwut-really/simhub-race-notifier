@@ -28,6 +28,8 @@ namespace RaceNotifier.Settings
         {
             if (Destinations == null)
                 Destinations = new List<Destination>();
+            // Drop any null entries a malformed JSON could introduce (mirrors Presets below).
+            Destinations.RemoveAll(d => d == null);
             if (Presets == null)
                 Presets = new List<Preset>();
 
