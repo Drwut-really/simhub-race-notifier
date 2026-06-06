@@ -9,7 +9,7 @@ using SimHub.Plugins;
 
 namespace RaceNotifier
 {
-    [PluginDescription("Send preset Discord messages to your team when you press a bound wheel button. (Telegram coming in a later version.)")]
+    [PluginDescription("Send preset messages to Discord or a custom webhook when you press a bound wheel button.")]
     [PluginAuthor("John Ebersole")]
     [PluginName("Race Notifier")]
     public class RaceNotifierPlugin : IPlugin, IDataPlugin, IWPFSettingsV2
