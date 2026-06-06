@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using RaceNotifier.Settings;
 using SimHub.Plugins.Styles;
 
@@ -9,6 +11,9 @@ namespace RaceNotifier.UI
     public partial class SettingsControl : UserControl
     {
         private readonly RaceNotifierPlugin _plugin;
+
+        // ActionIndexes whose rows are currently expanded; survives RebuildMessages().
+        private readonly HashSet<int> _expanded = new HashSet<int>();
 
         public SettingsControl()
         {
@@ -145,12 +150,25 @@ namespace RaceNotifier.UI
 
             panel.Children.Add(new TextBlock { Text = "Discord webhook URL", Margin = new Thickness(0, 8, 0, 2) });
             var urlBox = new TextBox { Text = dest.DiscordWebhookUrl ?? "", HorizontalAlignment = HorizontalAlignment.Stretch };
+            panel.Children.Add(urlBox);
+
+            // Live warning when this destination has no webhook URL.
+            var urlWarn = new TextBlock
+            {
+                Text = "⚠ No webhook URL — this destination can't send.",
+                Foreground = Brushes.Orange,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0),
+                Visibility = string.IsNullOrWhiteSpace(dest.DiscordWebhookUrl) ? Visibility.Visible : Visibility.Collapsed
+            };
+            panel.Children.Add(urlWarn);
+
             urlBox.TextChanged += (s, e) =>
             {
                 dest.DiscordWebhookUrl = urlBox.Text;
+                urlWarn.Visibility = string.IsNullOrWhiteSpace(urlBox.Text) ? Visibility.Visible : Visibility.Collapsed;
                 Persist();
             };
-            panel.Children.Add(urlBox);
 
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
 
@@ -188,9 +206,9 @@ namespace RaceNotifier.UI
 
             int idx = _plugin.Settings.NextFreeActionIndex();
             _plugin.Settings.Presets.Add(new Preset { ActionIndex = idx });
+            _expanded.Add(idx); // open the new row for immediate editing
 
-            // Make sure a bindable action exists for this slot. No-op if already pooled;
-            // sets PendingRestart (and shows the banner) only when it overflows the pool.
+            // Ensure a bindable action exists; sets PendingRestart only on pool overflow.
             bool bindableNow = _plugin.AddActionForIndex(idx);
 
             Persist();
@@ -205,8 +223,34 @@ namespace RaceNotifier.UI
         {
             if (_plugin?.Settings == null)
                 return;
+
+            string label = string.IsNullOrWhiteSpace(preset.Name) ? ("Message " + preset.ActionIndex) : preset.Name;
+            var r = MessageBox.Show(
+                "Remove \"" + label + "\"? This can't be undone.",
+                "Remove message",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (r != MessageBoxResult.Yes)
+                return;
+
             _plugin.Settings.Presets.Remove(preset);
+            _expanded.Remove(preset.ActionIndex);
             // The action stays registered; its index is reusable by the next AddPreset.
+            Persist();
+            RebuildMessages();
+        }
+
+        private void MovePreset(Preset preset, int delta)
+        {
+            if (_plugin?.Settings == null)
+                return;
+            var list = _plugin.Settings.Presets;
+            int i = list.IndexOf(preset);
+            int j = i + delta;
+            if (i < 0 || j < 0 || j >= list.Count)
+                return;
+            list.RemoveAt(i);
+            list.Insert(j, preset);
             Persist();
             RebuildMessages();
         }
@@ -232,39 +276,126 @@ namespace RaceNotifier.UI
                 MessagesContainer.Children.Add(BuildMessageRow(preset));
         }
 
-        private static string RowTitle(Preset preset)
+        private static string TitleFor(Preset preset)
         {
-            string label = string.IsNullOrWhiteSpace(preset.Name) ? ("Message " + preset.ActionIndex) : preset.Name;
-            return label + "  (action: RaceNotifier.SendMessage" + preset.ActionIndex + ")";
+            return string.IsNullOrWhiteSpace(preset.Name) ? ("Message " + preset.ActionIndex) : preset.Name;
+        }
+
+        /// <summary>
+        /// A borderless, clickable reorder arrow. Rendered as a plain TextBlock (which gets WPF
+        /// font fallback, unlike the SimHub button font) so the arrow glyph shows crisp with no
+        /// button background. Greyed and inert when <paramref name="enabled"/> is false.
+        /// </summary>
+        private UIElement MakeReorderArrow(string glyph, string tip, bool enabled, Action onClick)
+        {
+            var tb = new TextBlock
+            {
+                Text = glyph,
+                FontSize = 26,
+                FontWeight = FontWeights.Bold,
+                Foreground = enabled ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66)),
+                // Transparent (not null) so the whole bounds is hit-testable, not just the glyph pixels.
+                Background = Brushes.Transparent,
+                VerticalAlignment = VerticalAlignment.Top,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(8, 0, 4, 0),
+                Padding = new Thickness(4, 2, 4, 2),
+                ToolTip = tip
+            };
+            if (enabled)
+            {
+                tb.Cursor = System.Windows.Input.Cursors.Hand;
+                tb.MouseLeftButtonUp += (s, e) => onClick();
+            }
+            return tb;
         }
 
         private UIElement BuildMessageRow(Preset preset)
         {
             int idx = preset.ActionIndex;
-            var sub = new SHSubSection { Title = RowTitle(preset) };
-            var panel = new StackPanel { Margin = new Thickness(2) };
 
-            // Friendly name (optional)
-            panel.Children.Add(new TextBlock { Text = "Name (optional)", Margin = new Thickness(0, 0, 0, 2) });
+            // Outer grid: [Enabled] [Expander(title -> body)] [Up] [Down]
+            var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            // --- Header (inside expander): title + action name + warning glyph ---
+            var headerSp = new StackPanel { Orientation = Orientation.Horizontal };
+            var titleText = new TextBlock
+            {
+                Text = TitleFor(preset),
+                FontWeight = FontWeights.Bold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            headerSp.Children.Add(titleText);
+            headerSp.Children.Add(new TextBlock
+            {
+                Text = "  (RaceNotifier.SendMessage" + idx + ")",
+                Opacity = 0.6,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            var headerWarn = new TextBlock
+            {
+                Text = "  ⚠",
+                Foreground = Brushes.Orange,
+                VerticalAlignment = VerticalAlignment.Center,
+                Visibility = Visibility.Collapsed
+            };
+            headerSp.Children.Add(headerWarn);
+
+            // --- Body (expander content) ---
+            var body = new StackPanel { Margin = new Thickness(2, 6, 2, 2) };
+
+            var bodyWarn = new TextBlock
+            {
+                Foreground = Brushes.Orange,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 6),
+                Visibility = Visibility.Collapsed
+            };
+            body.Children.Add(bodyWarn);
+
+            // Live warning refresh (header glyph + body line), no full rebuild.
+            Action refreshWarnings = () =>
+            {
+                var reason = PresetValidation.Describe(preset, _plugin.Settings.Destinations);
+                if (reason == null)
+                {
+                    headerWarn.Visibility = Visibility.Collapsed;
+                    bodyWarn.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    headerWarn.Visibility = Visibility.Visible;
+                    headerWarn.ToolTip = reason;
+                    bodyWarn.Text = "⚠ " + reason;
+                    bodyWarn.Visibility = Visibility.Visible;
+                }
+            };
+
+            // Name (optional)
+            body.Children.Add(new TextBlock { Text = "Name (optional)", Margin = new Thickness(0, 0, 0, 2) });
             var nameBox = new TextBox { Text = preset.Name ?? "", Width = 240, HorizontalAlignment = HorizontalAlignment.Left };
             nameBox.TextChanged += (s, e) =>
             {
                 preset.Name = nameBox.Text;
-                sub.Title = RowTitle(preset);
+                titleText.Text = TitleFor(preset); // update header in place (no rebuild, keeps focus)
                 Persist();
             };
-            panel.Children.Add(nameBox);
+            body.Children.Add(nameBox);
 
-            var enabled = new SHToggleCheckbox { Content = "Enabled", Margin = new Thickness(0, 8, 0, 0) };
-            enabled.IsChecked = preset.Enabled;
-            enabled.Checked += (s, e) => { preset.Enabled = true; Persist(); };
-            enabled.Unchecked += (s, e) => { preset.Enabled = false; Persist(); };
-            panel.Children.Add(enabled);
-
-            panel.Children.Add(new TextBlock { Text = "Message text", Margin = new Thickness(0, 8, 0, 2) });
+            // Message text
+            body.Children.Add(new TextBlock { Text = "Message text", Margin = new Thickness(0, 8, 0, 2) });
             var textBox = new TextBox { Text = preset.Text ?? "", HorizontalAlignment = HorizontalAlignment.Stretch };
-            textBox.TextChanged += (s, e) => { preset.Text = textBox.Text; Persist(); };
-            panel.Children.Add(textBox);
+            textBox.TextChanged += (s, e) =>
+            {
+                preset.Text = textBox.Text;
+                Persist();
+                refreshWarnings();
+            };
+            body.Children.Add(textBox);
 
             // Cooldown
             var cdPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
@@ -279,13 +410,13 @@ namespace RaceNotifier.UI
                 }
             };
             cdPanel.Children.Add(cdBox);
-            panel.Children.Add(cdPanel);
+            body.Children.Add(cdPanel);
 
             // Destination selection
-            panel.Children.Add(new TextBlock { Text = "Send to:", Margin = new Thickness(0, 8, 0, 2) });
+            body.Children.Add(new TextBlock { Text = "Send to:", Margin = new Thickness(0, 8, 0, 2) });
             if (_plugin.Settings.Destinations.Count == 0)
             {
-                panel.Children.Add(new TextBlock { Text = "(add a destination first)", Opacity = 0.8 });
+                body.Children.Add(new TextBlock { Text = "(add a destination first)", Opacity = 0.8 });
             }
             else
             {
@@ -303,34 +434,71 @@ namespace RaceNotifier.UI
                         if (!preset.TargetDestinationIds.Contains(localDest.Id))
                             preset.TargetDestinationIds.Add(localDest.Id);
                         Persist();
+                        refreshWarnings();
                     };
                     cb.Unchecked += (s, e) =>
                     {
                         preset.TargetDestinationIds.Remove(localDest.Id);
                         Persist();
+                        refreshWarnings();
                     };
-                    panel.Children.Add(cb);
+                    body.Children.Add(cb);
                 }
             }
 
-            // In-panel button binding (best effort; falls back to a note if unavailable).
-            panel.Children.Add(BuildBindingControl(idx));
+            // In-panel button binding
+            body.Children.Add(BuildBindingControl(idx));
 
-            // Action buttons: Send test + Remove
+            // Send test + Remove
             var btnRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-
-            var testBtn = new SHButtonPrimary { Content = "Send test", Margin = new Thickness(0, 0, 8, 0), HorizontalAlignment = HorizontalAlignment.Left };
+            var testBtn = new SHButtonPrimary { Content = "Send test", Margin = new Thickness(0, 0, 8, 0) };
             testBtn.Click += (s, e) => SendPresetTest(preset);
             btnRow.Children.Add(testBtn);
-
             var removeBtn = new SHButtonSecondary { Content = "Remove" };
             removeBtn.Click += (s, e) => RemovePreset(preset);
             btnRow.Children.Add(removeBtn);
+            body.Children.Add(btnRow);
 
-            panel.Children.Add(btnRow);
+            // Set initial warning state.
+            refreshWarnings();
 
-            sub.Content = panel;
-            return sub;
+            // --- Expander wrapping header + body ---
+            var expander = new SHExpander
+            {
+                IsExpanded = _expanded.Contains(idx),
+                Header = headerSp,
+                Content = body,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            expander.Expanded += (s, e) => _expanded.Add(idx);
+            expander.Collapsed += (s, e) => _expanded.Remove(idx);
+            Grid.SetColumn(expander, 1);
+            grid.Children.Add(expander);
+
+            // --- Col 0: Enabled toggle (always visible, outside the expander header) ---
+            var enabled = new SHToggleCheckbox
+            {
+                IsChecked = preset.Enabled,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 2, 6, 0)
+            };
+            enabled.Checked += (s, e) => { preset.Enabled = true; Persist(); };
+            enabled.Unchecked += (s, e) => { preset.Enabled = false; Persist(); };
+            Grid.SetColumn(enabled, 0);
+            grid.Children.Add(enabled);
+
+            // --- Col 2/3: reorder buttons ---
+            int pos = _plugin.Settings.Presets.IndexOf(preset);
+            int count = _plugin.Settings.Presets.Count;
+
+            var up = MakeReorderArrow("↑", "Move up", pos > 0, () => MovePreset(preset, -1));
+            var down = MakeReorderArrow("↓", "Move down", pos < count - 1, () => MovePreset(preset, +1));
+            Grid.SetColumn(up, 2);
+            Grid.SetColumn(down, 3);
+            grid.Children.Add(up);
+            grid.Children.Add(down);
+
+            return grid;
         }
 
         private UIElement BuildBindingControl(int idx)

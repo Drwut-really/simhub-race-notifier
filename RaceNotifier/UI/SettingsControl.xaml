@@ -8,30 +8,29 @@
              mc:Ignorable="d"
              d:DesignWidth="760">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel>
-            <styles:SHSection Title="RACE NOTIFIER" ShowSeparator="True">
-                <StackPanel>
-                    <!-- Master on/off switch -->
-                    <styles:SHToggleCheckbox x:Name="PluginEnabledCheck"
-                                             Content="Plugin enabled"
-                                             Margin="0,0,0,8" />
+        <StackPanel Margin="8">
+            <!-- Description, directly under the page title -->
+            <TextBlock Text="Send preset Discord messages to your team when you press a bound wheel button."
+                       TextWrapping="Wrap" Margin="0,0,0,8" />
 
-                    <!-- Restart banner (shown only when newly added buttons need a restart) -->
-                    <Border x:Name="RestartBanner" Visibility="Collapsed"
-                            Background="#553311" Padding="8" Margin="0,0,0,8" CornerRadius="3">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520"
-                                       Text="New message buttons were added. Restart SimHub to finish making them bindable." />
-                            <styles:SHButtonPrimary x:Name="BannerRestartButton"
-                                                    Content="Restart SimHub"
-                                                    Margin="10,0,0,0" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
+            <!-- Master on/off switch -->
+            <styles:SHToggleCheckbox x:Name="PluginEnabledCheck"
+                                     Content="Plugin enabled"
+                                     Margin="0,0,0,8" />
 
-                    <TextBlock Text="Send preset Discord messages to your team when you press a bound wheel button."
-                               TextWrapping="Wrap" Margin="0,0,0,8" />
+            <!-- Restart banner (shown only when newly added buttons need a restart) -->
+            <Border x:Name="RestartBanner" Visibility="Collapsed"
+                    Background="#553311" Padding="8" Margin="0,0,0,8" CornerRadius="3">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="520"
+                               Text="New message buttons were added. Restart SimHub to finish making them bindable." />
+                    <styles:SHButtonPrimary x:Name="BannerRestartButton"
+                                            Content="Restart SimHub"
+                                            Margin="10,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
 
-                    <styles:SHTabControl>
+            <styles:SHTabControl>
                         <styles:SHTabItem Header="Messages">
                             <StackPanel Margin="4">
                                 <styles:SHButtonPrimary x:Name="AddMessageButton"
@@ -69,9 +68,7 @@
                                            Text="Restart is occasionally needed so newly added message buttons become bindable under Controls and Events. Removing a message frees its button slot; the next new message reuses it and inherits any binding that slot already had." />
                             </StackPanel>
                         </styles:SHTabItem>
-                    </styles:SHTabControl>
-                </StackPanel>
-            </styles:SHSection>
+            </styles:SHTabControl>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
