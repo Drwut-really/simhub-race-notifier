@@ -71,6 +71,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Notifications\CustomWebhookNotifier.cs" />
     <Compile Include="Notifications\DiscordNotifier.cs" />
     <Compile Include="Notifications\INotifier.cs" />
     <Compile Include="Notifications\NotificationDispatcher.cs" />

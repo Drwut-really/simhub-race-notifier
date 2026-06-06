@@ -44,7 +44,8 @@ namespace RaceNotifier.Notifications
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
             _notifiers = new Dictionary<DestinationType, INotifier>
             {
-                { DestinationType.Discord, new DiscordNotifier(_http) }
+                { DestinationType.Discord, new DiscordNotifier(_http) },
+                { DestinationType.CustomWebhook, new CustomWebhookNotifier(_http) }
                 // Phase 2: { DestinationType.Telegram, new TelegramNotifier(_http) }
             };
             _worker = new Thread(WorkerLoop)
