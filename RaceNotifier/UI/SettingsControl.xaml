@@ -10,7 +10,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="8">
             <!-- Description, directly under the page title -->
-            <TextBlock Text="Send preset Discord messages to your team when you press a bound wheel button."
+            <TextBlock Text="Send preset messages to Discord or a custom webhook when you press a bound wheel button."
                        TextWrapping="Wrap" Margin="0,0,0,8" />
 
             <!-- Master on/off switch -->
@@ -42,11 +42,19 @@
 
                         <styles:SHTabItem Header="Destinations">
                             <StackPanel Margin="4">
-                                <styles:SHButtonPrimary x:Name="AddDiscordButton"
-                                                        HorizontalAlignment="Left"
-                                                        Content="+ Add Discord destination" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Type" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <ComboBox x:Name="DestTypeCombo" Width="160"
+                                              SelectedIndex="0" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="Discord" />
+                                        <ComboBoxItem Content="Custom webhook" />
+                                    </ComboBox>
+                                    <styles:SHButtonPrimary x:Name="AddDestinationButton"
+                                                            Content="+ Add destination"
+                                                            Margin="8,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
                                 <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Webhook URLs are stored locally by SimHub and are never written to the project repository." />
+                                           Text="URLs are stored locally by SimHub and are never written to the project repository." />
                                 <StackPanel x:Name="DestinationsContainer" Margin="0,8,0,0" />
                             </StackPanel>
                         </styles:SHTabItem>

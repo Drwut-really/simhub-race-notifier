@@ -50,12 +50,16 @@ namespace RaceNotifier.UI
             RestartButton.Click += (s, e) => ConfirmRestart();
             BannerRestartButton.Click += (s, e) => ConfirmRestart();
 
-            AddDiscordButton.Click += (s, e) =>
+            AddDestinationButton.Click += (s, e) =>
             {
+                var type = DestTypeCombo.SelectedIndex == 1
+                    ? DestinationType.CustomWebhook
+                    : DestinationType.Discord;
+                string baseName = type == DestinationType.CustomWebhook ? "Custom webhook " : "Discord ";
                 _plugin.Settings.Destinations.Add(new Destination
                 {
-                    Name = "Discord " + (_plugin.Settings.Destinations.Count + 1),
-                    Type = DestinationType.Discord
+                    Name = baseName + (_plugin.Settings.Destinations.Count + 1),
+                    Type = type
                 });
                 Persist();
                 RebuildDestinations();
@@ -120,7 +124,7 @@ namespace RaceNotifier.UI
             {
                 DestinationsContainer.Children.Add(new TextBlock
                 {
-                    Text = "No destinations yet. Click \"+ Add Discord destination\".",
+                    Text = "No destinations yet. Pick a type and click \"+ Add destination\".",
                     Opacity = 0.8,
                     Margin = new Thickness(0, 4, 0, 0)
                 });
@@ -148,27 +152,65 @@ namespace RaceNotifier.UI
             };
             panel.Children.Add(nameBox);
 
-            panel.Children.Add(new TextBlock { Text = "Discord webhook URL", Margin = new Thickness(0, 8, 0, 2) });
-            var urlBox = new TextBox { Text = dest.DiscordWebhookUrl ?? "", HorizontalAlignment = HorizontalAlignment.Stretch };
+            bool isWebhook = dest.Type == DestinationType.CustomWebhook;
+
+            // Type label so the user can tell Discord vs custom-webhook rows apart.
+            panel.Children.Add(new TextBlock
+            {
+                Text = isWebhook ? "Type: Custom webhook" : "Type: Discord",
+                Opacity = 0.7,
+                Margin = new Thickness(0, 0, 0, 6)
+            });
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = isWebhook ? "Webhook URL" : "Discord webhook URL",
+                Margin = new Thickness(0, 8, 0, 2)
+            });
+            var urlBox = new TextBox
+            {
+                Text = (isWebhook ? dest.WebhookUrl : dest.DiscordWebhookUrl) ?? "",
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             panel.Children.Add(urlBox);
 
-            // Live warning when this destination has no webhook URL.
+            // Live warning when this destination has no usable URL for its type.
             var urlWarn = new TextBlock
             {
-                Text = "⚠ No webhook URL — this destination can't send.",
+                Text = "⚠ No URL — this destination can't send.",
                 Foreground = Brushes.Orange,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 4, 0, 0),
-                Visibility = string.IsNullOrWhiteSpace(dest.DiscordWebhookUrl) ? Visibility.Visible : Visibility.Collapsed
+                Visibility = dest.HasUsableTarget ? Visibility.Collapsed : Visibility.Visible
             };
             panel.Children.Add(urlWarn);
 
             urlBox.TextChanged += (s, e) =>
             {
-                dest.DiscordWebhookUrl = urlBox.Text;
-                urlWarn.Visibility = string.IsNullOrWhiteSpace(urlBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+                if (isWebhook) dest.WebhookUrl = urlBox.Text;
+                else dest.DiscordWebhookUrl = urlBox.Text;
+                urlWarn.Visibility = dest.HasUsableTarget ? Visibility.Collapsed : Visibility.Visible;
                 Persist();
+                RebuildMessages(); // refresh type-aware message warnings (Messages tab; no focus theft)
             };
+
+            // Body-format picker — custom webhook only.
+            if (isWebhook)
+            {
+                panel.Children.Add(new TextBlock { Text = "Body format", Margin = new Thickness(0, 8, 0, 2) });
+                var fmt = new ComboBox { Width = 240, HorizontalAlignment = HorizontalAlignment.Left };
+                fmt.Items.Add("JSON ({\"content\": message})");
+                fmt.Items.Add("Plain text");
+                fmt.SelectedIndex = dest.WebhookBodyFormat == WebhookBodyFormat.PlainText ? 1 : 0;
+                fmt.SelectionChanged += (s, e) =>
+                {
+                    dest.WebhookBodyFormat = fmt.SelectedIndex == 1
+                        ? WebhookBodyFormat.PlainText
+                        : WebhookBodyFormat.Json;
+                    Persist();
+                };
+                panel.Children.Add(fmt);
+            }
 
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
 
