@@ -1,0 +1,25 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userprefs
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.vsidx
+
+# MSBuild logs
+*.binlog
+msbuild*.log
+
+# OS noise
+Thumbs.db
+desktop.ini
+
+# NEVER commit secrets. Discord webhook URLs, Telegram bot tokens, and chat ids
+# are stored at runtime in SimHub\PluginsData\Common (outside this repo) and must
+# not be added here.
+*.secrets
+appsettings.local.json
