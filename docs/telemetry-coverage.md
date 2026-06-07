@@ -79,6 +79,18 @@ keeps `{flag}` working across every SimHub-supported game. The trade-off is the 
 importantly, **no Red flag** and no waving/penalty distinctions. If those are ever needed, they'd require
 opting into game-specific raw data per game (a separate, larger feature).
 
+## Currently supported message variables
+
+Race Notifier resolves these `{tokens}` in message text at send time (case-insensitive; unknown tokens
+are left as written). The list is the single source in `RaceNotifier/Telemetry/VariableCatalog.cs`.
+
+| Variable | Fills in | Source |
+| --- | --- | --- |
+| `{flag}` | current track flag (Yellow, Green, Checkered…; `none` when clear or the game isn't running) | `StatusDataBase.Flag_Name` |
+
+Adding a native variable is one `VariableEntry` row in the catalog — it appears in both the message
+substitution and the settings-UI variables block automatically.
+
 ## Architectural constraint: telemetry is local to the sim PC
 
 SimHub reads each game's telemetry from **local shared memory** on the machine running the sim. A SimHub

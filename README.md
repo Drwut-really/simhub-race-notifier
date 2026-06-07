@@ -50,7 +50,7 @@ Restart SimHub and enable the plugin when prompted.
    channel your team watches, and **Copy Webhook URL**.
 2. In SimHub: open **Race Notifier** in the left menu.
 3. Add a **Destination** (type Discord) and paste the webhook URL.
-4. Click **+ Add message**: enable it, type the text, choose the destination(s), set a cooldown.
+4. Click **+ Add message**: enable it, type the text, choose the destination(s), set a cooldown. You can include `{flag}` in the text to insert the current track flag — filled in live when the message sends (`none` when clear or the game isn't running).
 5. Bind the message to a wheel button, either way:
    - **Simple bind** — on the **Messages** tab, click the bind button on the message's row and press the button.
    - **Controls & Events** — bind the input `RaceNotifierPlugin.SendMessageN` under SimHub's **Controls & Events** menu.
