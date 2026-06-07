@@ -20,18 +20,9 @@ namespace RaceNotifier.Telemetry
 
             var snap = snapshot ?? TelemetrySnapshot.Empty;
 
+            // Unknown tokens are left exactly as written (TryResolve returns false).
             return TokenPattern.Replace(text, m =>
-            {
-                switch (m.Groups[1].Value.ToLowerInvariant())
-                {
-                    case "flag":
-                        return (snap.GameRunning && !string.IsNullOrWhiteSpace(snap.FlagName))
-                            ? snap.FlagName.Trim()
-                            : "none";
-                    default:
-                        return m.Value; // unknown token: leave exactly as written
-                }
-            });
+                VariableCatalog.TryResolve(m.Groups[1].Value, snap, out var value) ? value : m.Value);
         }
     }
 }
