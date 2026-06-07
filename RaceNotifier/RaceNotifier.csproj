@@ -81,6 +81,8 @@
     <Compile Include="Settings\Preset.cs" />
     <Compile Include="Settings\PresetValidation.cs" />
     <Compile Include="Settings\RaceNotifierSettings.cs" />
+    <Compile Include="Telemetry\TelemetrySnapshot.cs" />
+    <Compile Include="Telemetry\MessageVariables.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UI\SettingsControl.xaml.cs">
       <DependentUpon>SettingsControl.xaml</DependentUpon>
