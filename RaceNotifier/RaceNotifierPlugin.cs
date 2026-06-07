@@ -4,18 +4,26 @@ using System.Windows.Media;
 using GameReaderCommon;
 using RaceNotifier.Notifications;
 using RaceNotifier.Settings;
+using RaceNotifier.Telemetry;
 using RaceNotifier.UI;
 using SimHub.Plugins;
 
 namespace RaceNotifier
 {
-    [PluginDescription("Send preset Discord messages to your team when you press a bound wheel button. (Telegram coming in a later version.)")]
+    [PluginDescription("Send preset messages to Discord or a custom webhook when you press a bound wheel button.")]
     [PluginAuthor("John Ebersole")]
     [PluginName("Race Notifier")]
     public class RaceNotifierPlugin : IPlugin, IDataPlugin, IWPFSettingsV2
     {
         public RaceNotifierSettings Settings;
         public NotificationDispatcher Dispatcher;
+
+        // Latest telemetry for message-variable substitution. Written on the SimHub data thread,
+        // read lock-free at send time; the value is an immutable snapshot swapped by reference.
+        private volatile TelemetrySnapshot _telemetry = TelemetrySnapshot.Empty;
+
+        /// <summary>Latest telemetry snapshot used to resolve message variables like {flag}.</summary>
+        public TelemetrySnapshot CurrentTelemetry => _telemetry;
 
         public PluginManager PluginManager { get; set; }
 
@@ -49,7 +57,7 @@ namespace RaceNotifier
             Settings = this.ReadCommonSettings<RaceNotifierSettings>("GeneralSettings", () => new RaceNotifierSettings());
             Settings.EnsureInitialized();
 
-            Dispatcher = new NotificationDispatcher(() => Settings);
+            Dispatcher = new NotificationDispatcher(() => Settings, () => CurrentTelemetry);
             Dispatcher.OnSent = msg => this.TriggerEvent("MessageSent");
             Dispatcher.OnFailed = msg => this.TriggerEvent("MessageFailed");
 
@@ -76,10 +84,10 @@ namespace RaceNotifier
         }
 
         /// <summary>
-        /// Registers the bindable SimHub action for one slot index. We handle BOTH press
-        /// (actionStart) and release (actionEnd) so the message fires regardless of the press
-        /// type SimHub/ControlMapper assigns to the binding (ShortPress, Pressed, Released,
-        /// ShortAndLongPress, …). The per-message cooldown de-duplicates the press/release pair.
+        /// Registers the bindable SimHub INPUT for one slot index. Only the press fires the
+        /// message; the release is an intentional no-op. Because this is an input mapping (not an
+        /// Action), it fires on a raw button press and SimHub/ControlMapper "press type"
+        /// (ShortPress, ShortAndLongPress, …) does not apply.
         /// </summary>
         private void RegisterAction(int idx)
         {
@@ -142,7 +150,14 @@ namespace RaceNotifier
 
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
-            // Not used in v1. Reserved for telemetry-enriched messages in a later version.
+            // Capture only what the message variables need. Runs ~60x/s, so allocate a new snapshot
+            // only when the value actually changes (the volatile swap is the thread-safe handoff).
+            bool running = data.GameRunning && data.NewData != null;
+            string flag = running ? (data.NewData.Flag_Name ?? "") : "";
+
+            var current = _telemetry;
+            if (current.GameRunning != running || current.FlagName != flag)
+                _telemetry = new TelemetrySnapshot(running, flag);
         }
 
         public Control GetWPFSettingsControl(PluginManager pluginManager)

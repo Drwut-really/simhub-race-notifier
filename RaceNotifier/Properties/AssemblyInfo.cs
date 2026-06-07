@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 
 [assembly: AssemblyTitle("RaceNotifier")]
-[assembly: AssemblyDescription("SimHub plugin: send preset Discord/Telegram messages from a bound wheel button.")]
+[assembly: AssemblyDescription("SimHub plugin: send preset Discord/custom-webhook messages from a bound wheel button.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("Race Notifier")]

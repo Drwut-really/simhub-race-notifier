@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using RaceNotifier.Settings;
+using RaceNotifier.Telemetry;
 using SimHub.Plugins.Styles;
 
 namespace RaceNotifier.UI
@@ -50,12 +52,16 @@ namespace RaceNotifier.UI
             RestartButton.Click += (s, e) => ConfirmRestart();
             BannerRestartButton.Click += (s, e) => ConfirmRestart();
 
-            AddDiscordButton.Click += (s, e) =>
+            AddDestinationButton.Click += (s, e) =>
             {
+                var type = DestTypeCombo.SelectedIndex == 1
+                    ? DestinationType.CustomWebhook
+                    : DestinationType.Discord;
+                string baseName = type == DestinationType.CustomWebhook ? "Custom webhook " : "Discord ";
                 _plugin.Settings.Destinations.Add(new Destination
                 {
-                    Name = "Discord " + (_plugin.Settings.Destinations.Count + 1),
-                    Type = DestinationType.Discord
+                    Name = baseName + (_plugin.Settings.Destinations.Count + 1),
+                    Type = type
                 });
                 Persist();
                 RebuildDestinations();
@@ -65,6 +71,8 @@ namespace RaceNotifier.UI
             UpdateRestartBanner();
             RebuildDestinations();
             RebuildMessages();
+            BuildHelpTab();
+            VariablesHelp.Text = VariableHelpText();
         }
 
         private void SetPrefix(bool value)
@@ -120,7 +128,7 @@ namespace RaceNotifier.UI
             {
                 DestinationsContainer.Children.Add(new TextBlock
                 {
-                    Text = "No destinations yet. Click \"+ Add Discord destination\".",
+                    Text = "No destinations yet. Pick a type and click \"+ Add destination\".",
                     Opacity = 0.8,
                     Margin = new Thickness(0, 4, 0, 0)
                 });
@@ -148,27 +156,65 @@ namespace RaceNotifier.UI
             };
             panel.Children.Add(nameBox);
 
-            panel.Children.Add(new TextBlock { Text = "Discord webhook URL", Margin = new Thickness(0, 8, 0, 2) });
-            var urlBox = new TextBox { Text = dest.DiscordWebhookUrl ?? "", HorizontalAlignment = HorizontalAlignment.Stretch };
+            bool isWebhook = dest.Type == DestinationType.CustomWebhook;
+
+            // Type label so the user can tell Discord vs custom-webhook rows apart.
+            panel.Children.Add(new TextBlock
+            {
+                Text = isWebhook ? "Type: Custom webhook" : "Type: Discord",
+                Opacity = 0.7,
+                Margin = new Thickness(0, 0, 0, 6)
+            });
+
+            panel.Children.Add(new TextBlock
+            {
+                Text = isWebhook ? "Webhook URL" : "Discord webhook URL",
+                Margin = new Thickness(0, 8, 0, 2)
+            });
+            var urlBox = new TextBox
+            {
+                Text = (isWebhook ? dest.WebhookUrl : dest.DiscordWebhookUrl) ?? "",
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
             panel.Children.Add(urlBox);
 
-            // Live warning when this destination has no webhook URL.
+            // Live warning when this destination has no usable URL for its type.
             var urlWarn = new TextBlock
             {
-                Text = "⚠ No webhook URL — this destination can't send.",
+                Text = "⚠ No URL — this destination can't send.",
                 Foreground = Brushes.Orange,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 4, 0, 0),
-                Visibility = string.IsNullOrWhiteSpace(dest.DiscordWebhookUrl) ? Visibility.Visible : Visibility.Collapsed
+                Visibility = dest.HasUsableTarget ? Visibility.Collapsed : Visibility.Visible
             };
             panel.Children.Add(urlWarn);
 
             urlBox.TextChanged += (s, e) =>
             {
-                dest.DiscordWebhookUrl = urlBox.Text;
-                urlWarn.Visibility = string.IsNullOrWhiteSpace(urlBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+                if (isWebhook) dest.WebhookUrl = urlBox.Text;
+                else dest.DiscordWebhookUrl = urlBox.Text;
+                urlWarn.Visibility = dest.HasUsableTarget ? Visibility.Collapsed : Visibility.Visible;
                 Persist();
+                RebuildMessages(); // refresh type-aware message warnings (Messages tab; no focus theft)
             };
+
+            // Body-format picker — custom webhook only.
+            if (isWebhook)
+            {
+                panel.Children.Add(new TextBlock { Text = "Body format", Margin = new Thickness(0, 8, 0, 2) });
+                var fmt = new ComboBox { Width = 240, HorizontalAlignment = HorizontalAlignment.Left };
+                fmt.Items.Add("JSON ({\"content\": message})");
+                fmt.Items.Add("Plain text");
+                fmt.SelectedIndex = dest.WebhookBodyFormat == WebhookBodyFormat.PlainText ? 1 : 0;
+                fmt.SelectionChanged += (s, e) =>
+                {
+                    dest.WebhookBodyFormat = fmt.SelectedIndex == 1
+                        ? WebhookBodyFormat.PlainText
+                        : WebhookBodyFormat.Json;
+                    Persist();
+                };
+                panel.Children.Add(fmt);
+            }
 
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
 
@@ -276,6 +322,145 @@ namespace RaceNotifier.UI
                 MessagesContainer.Children.Add(BuildMessageRow(preset));
         }
 
+        /// <summary>One-line variables help built from the shared catalog (keeps UI and render in sync).</summary>
+        private static string VariableHelpText()
+        {
+            var list = string.Join("; ", VariableCatalog.Entries.Select(e => "{" + e.Token + "} = " + e.Description));
+            return "Variables — " + list + ". Filled in live when the message sends.";
+        }
+
+        /// <summary>A TextBlock built from alternating (text, bold) segments — for readable help copy.</summary>
+        private static TextBlock RichLine(params ValueTuple<string, bool>[] segments)
+        {
+            var tb = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4), LineHeight = 18 };
+            foreach (var seg in segments)
+                tb.Inlines.Add(new System.Windows.Documents.Run(seg.Item1)
+                { FontWeight = seg.Item2 ? FontWeights.Bold : FontWeights.Normal });
+            return tb;
+        }
+
+        /// <summary>
+        /// A fast collapsible section: an always-visible clickable header (chevron + supplied header)
+        /// over a body that shows/hides instantly via Visibility (no layout gap when collapsed).
+        /// onToggle(bool) fires when the open state changes. (We do NOT use SHContentExpander — it does
+        /// not reveal its Content when IsExpanded is toggled imperatively. The click pattern below is the
+        /// same proven Transparent-background + MouseLeftButtonUp used by the reorder arrows.)
+        /// </summary>
+        private UIElement MakeFastExpander(UIElement header, UIElement body, bool startExpanded, Action<bool> onToggle = null)
+        {
+            var chevron = new TextBlock
+            {
+                Text = startExpanded ? "▾" : "▸",
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Opacity = 0.8
+            };
+
+            body.Visibility = startExpanded ? Visibility.Visible : Visibility.Collapsed;
+
+            var headerRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Background = Brushes.Transparent, // make the whole row hit-testable
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+            headerRow.Children.Add(chevron);
+            headerRow.Children.Add(header);
+            headerRow.MouseLeftButtonUp += (s, e) =>
+            {
+                bool open = body.Visibility != Visibility.Visible;
+                body.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+                chevron.Text = open ? "▾" : "▸";
+                onToggle?.Invoke(open);
+            };
+
+            var holder = new StackPanel { Margin = new Thickness(0, 2, 0, 0) };
+            holder.Children.Add(headerRow);
+            holder.Children.Add(body);
+            return holder;
+        }
+
+        /// <summary>Wraps a Help example in an outlined card and bumps its overall text size so the
+        /// dropdowns read as distinct, obvious sections.</summary>
+        private static Border ExampleCard(UIElement inner)
+        {
+            var card = new Border
+            {
+                Child = inner,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x5a, 0x61, 0x70)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10, 6, 10, 8),
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            // FontSize is an inherited property — flows to every child TextBlock that doesn't set its own.
+            card.SetValue(System.Windows.Documents.TextElement.FontSizeProperty, 14.0);
+            return card;
+        }
+
+        private void BuildHelpTab()
+        {
+            HelpContainer.Children.Clear();
+
+            // Overview (moved from the old top-of-page description).
+            HelpContainer.Children.Add(RichLine(
+                ("Send preset messages to Discord or a custom webhook when you press a bound wheel button.", false)));
+
+            // Two columns: Quick start | Notes.
+            var cols = new Grid { Margin = new Thickness(0, 6, 0, 0) };
+            cols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            cols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var quick = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+            quick.Children.Add(new TextBlock { Text = "Quick start", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
+            quick.Children.Add(RichLine(("1.  ", true), ("Destinations", true), (" tab → add a ", false), ("Discord", true), (" or ", false), ("Custom webhook", true), (", paste the URL.", false)));
+            quick.Children.Add(RichLine(("2.  ", true), ("Messages", true), (" tab → ", false), ("+ Add message", true), (", type text, tick a destination, set a cooldown.", false)));
+            quick.Children.Add(RichLine(("3.  ", true), ("Bind it", true), (" — click the bind button on the message row.", false)));
+            quick.Children.Add(RichLine(("4.  ", true), ("Press the button → your message sends.", false)));
+            Grid.SetColumn(quick, 0);
+            cols.Children.Add(quick);
+
+            var notes = new StackPanel();
+            notes.Children.Add(new TextBlock { Text = "Notes", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
+            notes.Children.Add(RichLine(("•  ", false), ("Plugin enabled", true), (" (top) mutes everything when off.", false)));
+            notes.Children.Add(RichLine(("•  ", false), ("Cooldown", true), (" ignores rapid repeat presses.", false)));
+            notes.Children.Add(RichLine(("•  Use ", false), ("{flag}", true), (" in a message to insert the live track flag.", false)));
+            notes.Children.Add(RichLine(("•  Dashboard props ", false), ("LastSendStatus", true), ("; events ", false), ("MessageSent", true), ("/", false), ("MessageFailed", true), (" drive sounds/LEDs.", false)));
+            Grid.SetColumn(notes, 1);
+            cols.Children.Add(notes);
+            HelpContainer.Children.Add(cols);
+
+            // Examples (collapsible, fast).
+            HelpContainer.Children.Add(new TextBlock { Text = "Examples", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 12, 0, 2) });
+
+            // Variables example.
+            var varsBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
+            varsBody.Children.Add(new TextBlock { FontFamily = new FontFamily("Consolas"), Text = "You type:  Box now, flag {flag}", Margin = new Thickness(0, 0, 0, 2) });
+            varsBody.Children.Add(new TextBlock { FontFamily = new FontFamily("Consolas"), Text = "Sends:     Box now, flag Yellow   (\"none\" when clear)" });
+            HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
+                new TextBlock { Text = "Variables — using {flag}", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
+                varsBody, false)));
+
+            // Binding example.
+            var bindBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
+            bindBody.Children.Add(RichLine(("Each message is a bindable input ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (N = the number on the message's row). It fires on a plain press.", false)));
+            bindBody.Children.Add(RichLine(("1.  Expand the message on the ", false), ("Messages", true), (" tab.", false)));
+            bindBody.Children.Add(RichLine(("2.  Under ", false), ("Bind button", true), (", click the box.", false)));
+            bindBody.Children.Add(RichLine(("3.  Press the wheel/controller button you want.", false)));
+            bindBody.Children.Add(RichLine(("4.  Done — pressing that button now sends the message.", false)));
+            HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
+                new TextBlock { Text = "Binding a button", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
+                bindBody, false)));
+
+            // Webhooks example.
+            var webBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
+            webBody.Children.Add(RichLine(("Discord:", true), (" Server Settings → Integrations → Webhooks → New Webhook → Copy URL. Then Destinations → Discord → + Add destination → paste.", false)));
+            webBody.Children.Add(RichLine(("Custom webhook:", true), (" Destinations → Custom webhook → + Add destination → paste any endpoint URL → pick ", false), ("Body format", true), (" (JSON for Discord-style, Plain text for raw).", false)));
+            HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
+                new TextBlock { Text = "Webhooks — Discord & custom", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
+                webBody, false)));
+        }
+
         private static string TitleFor(Preset preset)
         {
             return string.IsNullOrWhiteSpace(preset.Name) ? ("Message " + preset.ActionIndex) : preset.Name;
@@ -376,7 +561,7 @@ namespace RaceNotifier.UI
             };
 
             // Name (optional)
-            body.Children.Add(new TextBlock { Text = "Name (optional)", Margin = new Thickness(0, 0, 0, 2) });
+            body.Children.Add(new TextBlock { Text = "Message name (optional)", Margin = new Thickness(0, 0, 0, 2) });
             var nameBox = new TextBox { Text = preset.Name ?? "", Width = 240, HorizontalAlignment = HorizontalAlignment.Left };
             nameBox.TextChanged += (s, e) =>
             {
@@ -387,7 +572,7 @@ namespace RaceNotifier.UI
             body.Children.Add(nameBox);
 
             // Message text
-            body.Children.Add(new TextBlock { Text = "Message text", Margin = new Thickness(0, 8, 0, 2) });
+            body.Children.Add(new TextBlock { Text = "Message", Margin = new Thickness(0, 8, 0, 2) });
             var textBox = new TextBox { Text = preset.Text ?? "", HorizontalAlignment = HorizontalAlignment.Stretch };
             textBox.TextChanged += (s, e) =>
             {
@@ -399,7 +584,7 @@ namespace RaceNotifier.UI
 
             // Cooldown
             var cdPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-            cdPanel.Children.Add(new TextBlock { Text = "Cooldown (s):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            cdPanel.Children.Add(new TextBlock { Text = "Cooldown — ignore repeat presses for", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
             var cdBox = new TextBox { Text = preset.CooldownSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 60 };
             cdBox.TextChanged += (s, e) =>
             {
@@ -410,6 +595,7 @@ namespace RaceNotifier.UI
                 }
             };
             cdPanel.Children.Add(cdBox);
+            cdPanel.Children.Add(new TextBlock { Text = "seconds", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
             body.Children.Add(cdPanel);
 
             // Destination selection
@@ -462,18 +648,13 @@ namespace RaceNotifier.UI
             // Set initial warning state.
             refreshWarnings();
 
-            // --- Expander wrapping header + body ---
-            var expander = new SHExpander
+            // --- Fast collapsible section (header + body) replacing the slow SHExpander ---
+            var section = MakeFastExpander(headerSp, body, _expanded.Contains(idx), open =>
             {
-                IsExpanded = _expanded.Contains(idx),
-                Header = headerSp,
-                Content = body,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            expander.Expanded += (s, e) => _expanded.Add(idx);
-            expander.Collapsed += (s, e) => _expanded.Remove(idx);
-            Grid.SetColumn(expander, 1);
-            grid.Children.Add(expander);
+                if (open) _expanded.Add(idx); else _expanded.Remove(idx);
+            });
+            Grid.SetColumn(section, 1);
+            grid.Children.Add(section);
 
             // --- Col 0: Enabled toggle (always visible, outside the expander header) ---
             var enabled = new SHToggleCheckbox

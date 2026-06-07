@@ -9,10 +9,6 @@
              d:DesignWidth="760">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="8">
-            <!-- Description, directly under the page title -->
-            <TextBlock Text="Send preset Discord messages to your team when you press a bound wheel button."
-                       TextWrapping="Wrap" Margin="0,0,0,8" />
-
             <!-- Master on/off switch -->
             <styles:SHToggleCheckbox x:Name="PluginEnabledCheck"
                                      Content="Plugin enabled"
@@ -33,6 +29,7 @@
             <styles:SHTabControl>
                         <styles:SHTabItem Header="Messages">
                             <StackPanel Margin="4">
+                                <styles:SHInlineInfo x:Name="VariablesHelp" Margin="0,0,0,8" />
                                 <styles:SHButtonPrimary x:Name="AddMessageButton"
                                                         HorizontalAlignment="Left"
                                                         Content="+ Add message" Margin="0,0,0,8" />
@@ -42,11 +39,17 @@
 
                         <styles:SHTabItem Header="Destinations">
                             <StackPanel Margin="4">
-                                <styles:SHButtonPrimary x:Name="AddDiscordButton"
-                                                        HorizontalAlignment="Left"
-                                                        Content="+ Add Discord destination" />
-                                <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Webhook URLs are stored locally by SimHub and are never written to the project repository." />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Type" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                    <ComboBox x:Name="DestTypeCombo" Width="160"
+                                              SelectedIndex="0" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="Discord" />
+                                        <ComboBoxItem Content="Custom webhook" />
+                                    </ComboBox>
+                                    <styles:SHButtonPrimary x:Name="AddDestinationButton"
+                                                            Content="+ Add destination"
+                                                            Margin="8,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
                                 <StackPanel x:Name="DestinationsContainer" Margin="0,8,0,0" />
                             </StackPanel>
                         </styles:SHTabItem>
@@ -58,15 +61,14 @@
                                 <TextBlock Text="Sender name" Margin="0,8,0,2" />
                                 <TextBox x:Name="SenderNameBox" Width="260" HorizontalAlignment="Left" />
                                 <styles:SHSectionSeparator />
-                                <TextBlock TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Dashboard properties: RaceNotifierPlugin.LastSendStatus, RaceNotifierPlugin.LastSendMessage. Events: RaceNotifierPlugin.MessageSent, RaceNotifierPlugin.MessageFailed (bind to sounds/LEDs in SimHub)." />
-                                <styles:SHSectionSeparator />
                                 <styles:SHButtonPrimary x:Name="RestartButton"
                                                         HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Content="Restart SimHub" />
-                                <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Restart is occasionally needed so newly added message buttons become bindable under Controls and Events. Removing a message frees its button slot; the next new message reuses it and inherits any binding that slot already had." />
                             </StackPanel>
+                        </styles:SHTabItem>
+
+                        <styles:SHTabItem Header="Help">
+                            <StackPanel x:Name="HelpContainer" Margin="4" />
                         </styles:SHTabItem>
             </styles:SHTabControl>
         </StackPanel>

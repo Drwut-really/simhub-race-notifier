@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using RaceNotifier.Settings;
+using RaceNotifier.Telemetry;
 
 namespace RaceNotifier.Notifications
 {
@@ -16,6 +17,7 @@ namespace RaceNotifier.Notifications
     public class NotificationDispatcher : IDisposable
     {
         private readonly Func<RaceNotifierSettings> _getSettings;
+        private readonly Func<TelemetrySnapshot> _getTelemetry;
         private readonly Dictionary<DestinationType, INotifier> _notifiers;
         private readonly HttpClient _http;
         private readonly BlockingCollection<Job> _queue = new BlockingCollection<Job>(new ConcurrentQueue<Job>());
@@ -38,14 +40,15 @@ namespace RaceNotifier.Notifications
             public List<Destination> Destinations;
         }
 
-        public NotificationDispatcher(Func<RaceNotifierSettings> getSettings)
+        public NotificationDispatcher(Func<RaceNotifierSettings> getSettings, Func<TelemetrySnapshot> getTelemetry)
         {
             _getSettings = getSettings;
+            _getTelemetry = getTelemetry;
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
             _notifiers = new Dictionary<DestinationType, INotifier>
             {
-                { DestinationType.Discord, new DiscordNotifier(_http) }
-                // Phase 2: { DestinationType.Telegram, new TelegramNotifier(_http) }
+                { DestinationType.Discord, new DiscordNotifier(_http) },
+                { DestinationType.CustomWebhook, new CustomWebhookNotifier(_http) }
             };
             _worker = new Thread(WorkerLoop)
             {
@@ -56,9 +59,9 @@ namespace RaceNotifier.Notifications
         }
 
         /// <summary>
-        /// Called from the SimHub action callback. <paramref name="idx"/> is the preset's ActionIndex.
-        /// <paramref name="phase"/> is "press" or "release" — both are wired so the action fires for
-        /// any binding press type; the cooldown below collapses the press/release pair into one send.
+        /// Called from the SimHub input callback. <paramref name="idx"/> is the preset's ActionIndex.
+        /// <paramref name="phase"/> is "press" today (the input mapping's release is a no-op); it is
+        /// included for logging. The per-preset cooldown below guards against rapid repeat presses.
         /// </summary>
         public void FireByActionIndex(int idx, string phase = "press")
         {
@@ -119,7 +122,8 @@ namespace RaceNotifier.Notifications
             }
 
             SimHub.Logging.Current.Info("[RaceNotifier]   -> enqueued message " + idx + " to " + targets.Count + " destination(s).");
-            _queue.Add(new Job { Message = ApplyPrefix(settings, preset.Text), Destinations = targets });
+            var rendered = MessageVariables.Render(preset.Text, Telemetry());
+            _queue.Add(new Job { Message = ApplyPrefix(settings, rendered), Destinations = targets });
         }
 
         /// <summary>
@@ -137,9 +141,16 @@ namespace RaceNotifier.Notifications
 
             _queue.Add(new Job
             {
-                Message = ApplyPrefix(settings, message),
+                Message = ApplyPrefix(settings, MessageVariables.Render(message, Telemetry())),
                 Destinations = new List<Destination> { destination }
             });
+        }
+
+        /// <summary>Latest telemetry snapshot, never null even if the accessor is missing or throws.</summary>
+        private TelemetrySnapshot Telemetry()
+        {
+            try { return _getTelemetry?.Invoke() ?? TelemetrySnapshot.Empty; }
+            catch { return TelemetrySnapshot.Empty; }
         }
 
         private static string ApplyPrefix(RaceNotifierSettings settings, string text)
@@ -194,13 +205,16 @@ namespace RaceNotifier.Notifications
 
         private bool TrySendWithRetry(INotifier notifier, Destination dest, string message)
         {
-            if (TrySendOnce(notifier, dest, message))
+            var outcome = TrySendOnce(notifier, dest, message);
+            if (outcome == SendOutcome.Success)
                 return true;
-            Thread.Sleep(1000); // one quick retry
-            return TrySendOnce(notifier, dest, message);
+            if (outcome == SendOutcome.PermanentFailure)
+                return false; // deterministic client/config error — a second identical request can't help
+            Thread.Sleep(1000); // one quick retry, transient failures only
+            return TrySendOnce(notifier, dest, message) == SendOutcome.Success;
         }
 
-        private bool TrySendOnce(INotifier notifier, Destination dest, string message)
+        private SendOutcome TrySendOnce(INotifier notifier, Destination dest, string message)
         {
             try
             {
@@ -208,8 +222,9 @@ namespace RaceNotifier.Notifications
             }
             catch (Exception ex)
             {
+                // Network/transport error — transient by nature, so allow the one retry.
                 SimHub.Logging.Current.Info("[RaceNotifier] Send failed to '" + dest.Name + "': " + ex.Message);
-                return false;
+                return SendOutcome.TransientFailure;
             }
         }
 

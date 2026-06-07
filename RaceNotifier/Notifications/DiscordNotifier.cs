@@ -21,17 +21,16 @@ namespace RaceNotifier.Notifications
 
         public DestinationType Type => DestinationType.Discord;
 
-        public async Task<bool> SendAsync(Destination destination, string message)
+        public async Task<SendOutcome> SendAsync(Destination destination, string message)
         {
             if (destination == null || string.IsNullOrWhiteSpace(destination.DiscordWebhookUrl))
-                return false;
+                return SendOutcome.PermanentFailure;
 
             var payload = JsonConvert.SerializeObject(new { content = message });
             using (var content = new StringContent(payload, Encoding.UTF8, "application/json"))
             using (var resp = await _http.PostAsync(destination.DiscordWebhookUrl, content).ConfigureAwait(false))
             {
-                var code = (int)resp.StatusCode;
-                return code >= 200 && code < 300;
+                return HttpSendClassifier.FromStatusCode((int)resp.StatusCode);
             }
         }
     }
