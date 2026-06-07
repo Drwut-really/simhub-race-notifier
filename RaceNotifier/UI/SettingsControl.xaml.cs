@@ -72,6 +72,7 @@ namespace RaceNotifier.UI
             RebuildDestinations();
             RebuildMessages();
             BuildHelpTab();
+            VariablesHelp.Text = VariableHelpText();
         }
 
         private void SetPrefix(bool value)
@@ -414,7 +415,7 @@ namespace RaceNotifier.UI
             quick.Children.Add(new TextBlock { Text = "Quick start", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
             quick.Children.Add(RichLine(("1.  ", true), ("Destinations", true), (" tab → add a ", false), ("Discord", true), (" or ", false), ("Custom webhook", true), (", paste the URL.", false)));
             quick.Children.Add(RichLine(("2.  ", true), ("Messages", true), (" tab → ", false), ("+ Add message", true), (", type text, tick a destination, set a cooldown.", false)));
-            quick.Children.Add(RichLine(("3.  ", true), ("Bind it", true), (" — click the bind button on the message row, or map ", false), ("RaceNotifierPlugin.SendMessageN", true), (" under Controls & Events.", false)));
+            quick.Children.Add(RichLine(("3.  ", true), ("Bind it", true), (" — click the bind button on the message row.", false)));
             quick.Children.Add(RichLine(("4.  ", true), ("Press the button → your message sends.", false)));
             Grid.SetColumn(quick, 0);
             cols.Children.Add(quick);
@@ -440,19 +441,13 @@ namespace RaceNotifier.UI
                 new TextBlock { Text = "Variables — using {flag}", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
                 varsBody, false)));
 
-            // Binding example (both methods).
+            // Binding example.
             var bindBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
-            bindBody.Children.Add(RichLine(("Each message is a bindable input ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (N = the number on the message's row). Both methods fire on a plain press.", false)));
-            bindBody.Children.Add(new TextBlock { Text = "In the plugin (Messages tab):", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 2) });
+            bindBody.Children.Add(RichLine(("Each message is a bindable input ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (N = the number on the message's row). It fires on a plain press.", false)));
             bindBody.Children.Add(RichLine(("1.  Expand the message on the ", false), ("Messages", true), (" tab.", false)));
             bindBody.Children.Add(RichLine(("2.  Under ", false), ("Bind button", true), (", click the box.", false)));
             bindBody.Children.Add(RichLine(("3.  Press the wheel/controller button you want.", false)));
             bindBody.Children.Add(RichLine(("4.  Done — pressing that button now sends the message.", false)));
-            bindBody.Children.Add(new TextBlock { Text = "SimHub Controls & Events:", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 2) });
-            bindBody.Children.Add(RichLine(("1.  Open ", false), ("Controls and events", true), (" from SimHub's left menu.", false)));
-            bindBody.Children.Add(RichLine(("2.  Add a control and press your wheel button so SimHub detects it.", false)));
-            bindBody.Children.Add(RichLine(("3.  Assign it to ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (match N to the row number).", false)));
-            bindBody.Children.Add(RichLine(("4.  Pressing that button now sends the message.", false)));
             HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
                 new TextBlock { Text = "Binding a button", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
                 bindBody, false)));
@@ -586,13 +581,6 @@ namespace RaceNotifier.UI
                 refreshWarnings();
             };
             body.Children.Add(textBox);
-
-            // Variables — native SimHub info block; its text is built from the shared catalog.
-            body.Children.Add(new SHInlineInfo
-            {
-                Text = VariableHelpText(),
-                Margin = new Thickness(0, 4, 0, 0)
-            });
 
             // Cooldown
             var cdPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };

@@ -29,6 +29,7 @@
             <styles:SHTabControl>
                         <styles:SHTabItem Header="Messages">
                             <StackPanel Margin="4">
+                                <styles:SHInlineInfo x:Name="VariablesHelp" Margin="0,0,0,8" />
                                 <styles:SHButtonPrimary x:Name="AddMessageButton"
                                                         HorizontalAlignment="Left"
                                                         Content="+ Add message" Margin="0,0,0,8" />
