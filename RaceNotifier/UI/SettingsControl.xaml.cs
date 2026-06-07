@@ -660,18 +660,13 @@ namespace RaceNotifier.UI
             // Set initial warning state.
             refreshWarnings();
 
-            // --- Expander wrapping header + body ---
-            var expander = new SHExpander
+            // --- Fast collapsible section (header + body) replacing the slow SHExpander ---
+            var section = MakeFastExpander(headerSp, body, _expanded.Contains(idx), open =>
             {
-                IsExpanded = _expanded.Contains(idx),
-                Header = headerSp,
-                Content = body,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            expander.Expanded += (s, e) => _expanded.Add(idx);
-            expander.Collapsed += (s, e) => _expanded.Remove(idx);
-            Grid.SetColumn(expander, 1);
-            grid.Children.Add(expander);
+                if (open) _expanded.Add(idx); else _expanded.Remove(idx);
+            });
+            Grid.SetColumn(section, 1);
+            grid.Children.Add(section);
 
             // --- Col 0: Enabled toggle (always visible, outside the expander header) ---
             var enabled = new SHToggleCheckbox
