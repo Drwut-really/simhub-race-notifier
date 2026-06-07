@@ -37,8 +37,11 @@ namespace RaceNotifier.Telemetry
                 s => (s.GameRunning && !string.IsNullOrWhiteSpace(s.FlagName)) ? s.FlagName.Trim() : "none"),
         };
 
+        // Array.AsReadOnly wraps the array in a ReadOnlyCollection, so callers can't cast back and mutate.
+        private static readonly IReadOnlyList<VariableEntry> _entriesView = Array.AsReadOnly(_entries);
+
         /// <summary>Read-only view of the registered variables (for the UI to list).</summary>
-        public static IReadOnlyList<VariableEntry> Entries => _entries;
+        public static IReadOnlyList<VariableEntry> Entries => _entriesView;
 
         private static readonly Dictionary<string, VariableEntry> _byToken =
             _entries.ToDictionary(e => e.Token, StringComparer.OrdinalIgnoreCase);
