@@ -379,6 +379,24 @@ namespace RaceNotifier.UI
             return holder;
         }
 
+        /// <summary>Wraps a Help example in an outlined card and bumps its overall text size so the
+        /// dropdowns read as distinct, obvious sections.</summary>
+        private static Border ExampleCard(UIElement inner)
+        {
+            var card = new Border
+            {
+                Child = inner,
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x5a, 0x61, 0x70)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10, 6, 10, 8),
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            // FontSize is an inherited property — flows to every child TextBlock that doesn't set its own.
+            card.SetValue(System.Windows.Documents.TextElement.FontSizeProperty, 14.0);
+            return card;
+        }
+
         private void BuildHelpTab()
         {
             HelpContainer.Children.Clear();
@@ -418,9 +436,9 @@ namespace RaceNotifier.UI
             var varsBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
             varsBody.Children.Add(new TextBlock { FontFamily = new FontFamily("Consolas"), Text = "You type:  Box now, flag {flag}", Margin = new Thickness(0, 0, 0, 2) });
             varsBody.Children.Add(new TextBlock { FontFamily = new FontFamily("Consolas"), Text = "Sends:     Box now, flag Yellow   (\"none\" when clear)" });
-            HelpContainer.Children.Add(MakeFastExpander(
-                new TextBlock { Text = "Variables — using {flag}", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
-                varsBody, false));
+            HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
+                new TextBlock { Text = "Variables — using {flag}", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
+                varsBody, false)));
 
             // Binding example (both methods).
             var bindBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
@@ -435,17 +453,17 @@ namespace RaceNotifier.UI
             bindBody.Children.Add(RichLine(("2.  Add a control and press your wheel button so SimHub detects it.", false)));
             bindBody.Children.Add(RichLine(("3.  Assign it to ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (match N to the row number).", false)));
             bindBody.Children.Add(RichLine(("4.  Pressing that button now sends the message.", false)));
-            HelpContainer.Children.Add(MakeFastExpander(
-                new TextBlock { Text = "Binding a button", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
-                bindBody, false));
+            HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
+                new TextBlock { Text = "Binding a button", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
+                bindBody, false)));
 
             // Webhooks example.
             var webBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
             webBody.Children.Add(RichLine(("Discord:", true), (" Server Settings → Integrations → Webhooks → New Webhook → Copy URL. Then Destinations → Discord → + Add destination → paste.", false)));
             webBody.Children.Add(RichLine(("Custom webhook:", true), (" Destinations → Custom webhook → + Add destination → paste any endpoint URL → pick ", false), ("Body format", true), (" (JSON for Discord-style, Plain text for raw).", false)));
-            HelpContainer.Children.Add(MakeFastExpander(
-                new TextBlock { Text = "Webhooks — Discord & custom", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
-                webBody, false));
+            HelpContainer.Children.Add(ExampleCard(MakeFastExpander(
+                new TextBlock { Text = "Webhooks — Discord & custom", FontWeight = FontWeights.Bold, FontSize = 15, VerticalAlignment = VerticalAlignment.Center },
+                webBody, false)));
         }
 
         private static string TitleFor(Preset preset)
