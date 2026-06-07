@@ -4,8 +4,8 @@ using RaceNotifier.Settings;
 namespace RaceNotifier.Notifications
 {
     /// <summary>
-    /// A transport that can deliver a message to a destination. Discord ships in v1;
-    /// Telegram drops in behind this interface in Phase 2 with no dispatcher changes.
+    /// A transport that can deliver a message to a destination (Discord, custom webhook).
+    /// New transports drop in behind this interface with no dispatcher changes.
     /// </summary>
     public interface INotifier
     {

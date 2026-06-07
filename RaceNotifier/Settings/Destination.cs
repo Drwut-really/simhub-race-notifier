@@ -5,8 +5,7 @@ namespace RaceNotifier.Settings
     public enum DestinationType
     {
         Discord = 0,
-        Telegram = 1,     // Phase 2 (reserved)
-        CustomWebhook = 2
+        CustomWebhook = 2  // (1 is intentionally skipped — kept stable so saved settings deserialize)
     }
 
     /// <summary>How a custom webhook formats its request body.</summary>
@@ -16,10 +15,7 @@ namespace RaceNotifier.Settings
         PlainText = 1 // raw message as text/plain
     }
 
-    /// <summary>
-    /// A single place a notification can be sent. Discord is supported in v1;
-    /// Telegram fields exist now so Phase 2 is purely additive.
-    /// </summary>
+    /// <summary>A single place a notification can be sent (Discord or a custom webhook).</summary>
     public class Destination
     {
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
@@ -33,10 +29,6 @@ namespace RaceNotifier.Settings
         public string WebhookUrl { get; set; } = "";
         public WebhookBodyFormat WebhookBodyFormat { get; set; } = WebhookBodyFormat.Json;
 
-        // Telegram (Phase 2)
-        public string TelegramBotToken { get; set; } = "";
-        public string TelegramChatId { get; set; } = "";
-
         /// <summary>True when this destination has the URL it needs for its type.</summary>
         public bool HasUsableTarget
         {
@@ -46,7 +38,7 @@ namespace RaceNotifier.Settings
                 {
                     case DestinationType.Discord: return !string.IsNullOrWhiteSpace(DiscordWebhookUrl);
                     case DestinationType.CustomWebhook: return !string.IsNullOrWhiteSpace(WebhookUrl);
-                    default: return false; // Telegram / unknown — no transport yet
+                    default: return false; // unknown type — no transport
                 }
             }
         }

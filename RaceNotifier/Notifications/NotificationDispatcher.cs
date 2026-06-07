@@ -49,7 +49,6 @@ namespace RaceNotifier.Notifications
             {
                 { DestinationType.Discord, new DiscordNotifier(_http) },
                 { DestinationType.CustomWebhook, new CustomWebhookNotifier(_http) }
-                // Phase 2: { DestinationType.Telegram, new TelegramNotifier(_http) }
             };
             _worker = new Thread(WorkerLoop)
             {

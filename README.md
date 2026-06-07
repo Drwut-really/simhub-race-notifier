@@ -1,8 +1,7 @@
 # Race Notifier — SimHub plugin
 
 Press a bound steering-wheel button → fire a preset message to your team on **Discord** or
-any **custom webhook** (Telegram support is planned for a later version). Built for
-hands-on-wheel team radio: "Pitting this lap", "Need a gap", "GG", etc.
+any **custom webhook**. Built for hands-on-wheel team radio: "Pitting this lap", "Need a gap", "GG", etc.
 
 ## Features (v0.1.2)
 - **Unlimited messages** — add/remove as many as you like; each is bindable to any
@@ -70,10 +69,8 @@ unauthenticated `POST` (no custom headers, auth, or per-field templating).
    status code (the URL is never logged).
 
 ## Security
-Webhook URLs (and later Telegram tokens) are **secrets**. They are stored by SimHub in
+Webhook URLs are **secrets**. They are stored by SimHub in
 `SimHub\PluginsData\Common` at runtime and are **never** committed to this repository.
 
 ## Roadmap
-- **Phase 2:** Telegram support (BotFather bot + group `chat_id`, with an in-app chat-id
-  discovery helper). The code is already structured for it (`INotifier` + `DestinationType`).
 - Optional telemetry-enriched messages (lap/position/fuel) and on-send sound presets.
