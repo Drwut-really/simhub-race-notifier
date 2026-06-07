@@ -3,7 +3,7 @@
 Press a bound steering-wheel button → fire a preset message to your team on **Discord** or
 any **custom webhook**. Built for hands-on-wheel team radio: "Pitting this lap", "Need a gap", "GG", etc.
 
-## Features (v0.1.2)
+## Features (v0.1.3)
 - **Unlimited messages** — add/remove as many as you like; each is bindable to any
   controller/wheel button via SimHub's mapper. Button slots are pre-registered in a pool that
   grows on demand; a one-click **Restart SimHub** finishes binding brand-new buttons when needed.
@@ -26,7 +26,7 @@ any **custom webhook**. Built for hands-on-wheel team radio: "Pitting this lap",
   (includes MSBuild + the .NET Framework 4.8 targeting pack).
 
 ## Install (compiled — no build)
-1. Download `RaceNotifier-v0.1.2.zip` from the [latest Release](../../releases/latest).
+1. Download `RaceNotifier-v0.1.3.zip` from the [latest Release](../../releases/latest).
 2. Unzip and copy `RaceNotifier.dll` into your SimHub folder
    (e.g. `C:\Program Files (x86)\SimHub\`).
 3. Restart SimHub and enable **Race Notifier** when prompted.
