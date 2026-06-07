@@ -71,6 +71,7 @@ namespace RaceNotifier.UI
             UpdateRestartBanner();
             RebuildDestinations();
             RebuildMessages();
+            BuildHelpTab();
         }
 
         private void SetPrefix(bool value)
@@ -325,6 +326,133 @@ namespace RaceNotifier.UI
         {
             var list = string.Join("; ", VariableCatalog.Entries.Select(e => "{" + e.Token + "} = " + e.Description));
             return "Variables — " + list + ". Filled in live when the message sends.";
+        }
+
+        private static readonly Duration FastAnim = new Duration(TimeSpan.FromMilliseconds(80));
+
+        /// <summary>A TextBlock built from alternating (text, bold) segments — for readable help copy.</summary>
+        private static TextBlock RichLine(params ValueTuple<string, bool>[] segments)
+        {
+            var tb = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 4), LineHeight = 18 };
+            foreach (var seg in segments)
+                tb.Inlines.Add(new System.Windows.Documents.Run(seg.Item1)
+                { FontWeight = seg.Item2 ? FontWeights.Bold : FontWeights.Normal });
+            return tb;
+        }
+
+        /// <summary>
+        /// A fast collapsible section: an always-visible clickable header (chevron + supplied header)
+        /// over a body that reveals with a quick ~80ms animation via SHContentExpander. onToggle(bool)
+        /// fires when the open state changes.
+        /// </summary>
+        private UIElement MakeFastExpander(UIElement header, UIElement body, bool startExpanded, Action<bool> onToggle = null)
+        {
+            var chevron = new TextBlock
+            {
+                Text = startExpanded ? "▾" : "▸",
+                Margin = new Thickness(0, 0, 6, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Opacity = 0.8
+            };
+
+            var content = new SHContentExpander
+            {
+                Content = body,
+                IsExpanded = startExpanded,
+                // Fully qualified: ExpandDirection also exists in System.Windows.Controls (ambiguous);
+                // SimHub's enum only has Horizontal/Vertical.
+                ExpandDirection = SimHub.Plugins.Styles.ExpandDirection.Vertical,
+                AnimationDuration = FastAnim
+            };
+
+            var headerRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Background = Brushes.Transparent, // make the whole row hit-testable
+                Cursor = System.Windows.Input.Cursors.Hand
+            };
+            headerRow.Children.Add(chevron);
+            headerRow.Children.Add(header);
+            headerRow.MouseLeftButtonUp += (s, e) =>
+            {
+                content.IsExpanded = !content.IsExpanded;
+                chevron.Text = content.IsExpanded ? "▾" : "▸";
+                onToggle?.Invoke(content.IsExpanded);
+            };
+
+            var holder = new StackPanel { Margin = new Thickness(0, 2, 0, 0) };
+            holder.Children.Add(headerRow);
+            holder.Children.Add(content);
+            return holder;
+        }
+
+        private void BuildHelpTab()
+        {
+            HelpContainer.Children.Clear();
+
+            // Overview (moved from the old top-of-page description).
+            HelpContainer.Children.Add(RichLine(
+                ("Send preset messages to Discord or a custom webhook when you press a bound wheel button.", false)));
+
+            // Two columns: Quick start | Notes.
+            var cols = new Grid { Margin = new Thickness(0, 6, 0, 0) };
+            cols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            cols.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var quick = new StackPanel { Margin = new Thickness(0, 0, 12, 0) };
+            quick.Children.Add(new TextBlock { Text = "Quick start", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
+            quick.Children.Add(RichLine(("1.  ", true), ("Destinations", true), (" tab → add a ", false), ("Discord", true), (" or ", false), ("Custom webhook", true), (", paste the URL.", false)));
+            quick.Children.Add(RichLine(("2.  ", true), ("Messages", true), (" tab → ", false), ("+ Add message", true), (", type text, tick a destination, set a cooldown.", false)));
+            quick.Children.Add(RichLine(("3.  ", true), ("Bind it", true), (" — click the bind button on the message row, or map ", false), ("RaceNotifierPlugin.SendMessageN", true), (" under Controls & Events.", false)));
+            quick.Children.Add(RichLine(("4.  ", true), ("Press the button → your message sends.", false)));
+            Grid.SetColumn(quick, 0);
+            cols.Children.Add(quick);
+
+            var notes = new StackPanel();
+            notes.Children.Add(new TextBlock { Text = "Notes", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 4) });
+            notes.Children.Add(RichLine(("•  ", false), ("Plugin enabled", true), (" (top) mutes everything when off.", false)));
+            notes.Children.Add(RichLine(("•  ", false), ("Cooldown", true), (" ignores rapid repeat presses.", false)));
+            notes.Children.Add(RichLine(("•  Use ", false), ("{flag}", true), (" in a message to insert the live track flag.", false)));
+            notes.Children.Add(RichLine(("•  Dashboard props ", false), ("LastSendStatus", true), ("; events ", false), ("MessageSent", true), ("/", false), ("MessageFailed", true), (" drive sounds/LEDs.", false)));
+            Grid.SetColumn(notes, 1);
+            cols.Children.Add(notes);
+            HelpContainer.Children.Add(cols);
+
+            // Examples (collapsible, fast).
+            HelpContainer.Children.Add(new TextBlock { Text = "Examples", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 12, 0, 2) });
+
+            // Variables example.
+            var varsBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
+            varsBody.Children.Add(new TextBlock { FontFamily = new FontFamily("Consolas"), Text = "You type:  Box now, flag {flag}", Margin = new Thickness(0, 0, 0, 2) });
+            varsBody.Children.Add(new TextBlock { FontFamily = new FontFamily("Consolas"), Text = "Sends:     Box now, flag Yellow   (\"none\" when clear)" });
+            HelpContainer.Children.Add(MakeFastExpander(
+                new TextBlock { Text = "Variables — using {flag}", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
+                varsBody, false));
+
+            // Binding example (both methods).
+            var bindBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
+            bindBody.Children.Add(RichLine(("Each message is a bindable input ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (N = the number on the message's row). Both methods fire on a plain press.", false)));
+            bindBody.Children.Add(new TextBlock { Text = "In the plugin (Messages tab):", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 4, 0, 2) });
+            bindBody.Children.Add(RichLine(("1.  Expand the message on the ", false), ("Messages", true), (" tab.", false)));
+            bindBody.Children.Add(RichLine(("2.  Under ", false), ("Bind button", true), (", click the box.", false)));
+            bindBody.Children.Add(RichLine(("3.  Press the wheel/controller button you want.", false)));
+            bindBody.Children.Add(RichLine(("4.  Done — pressing that button now sends the message.", false)));
+            bindBody.Children.Add(new TextBlock { Text = "SimHub Controls & Events:", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 2) });
+            bindBody.Children.Add(RichLine(("1.  Open ", false), ("Controls and events", true), (" from SimHub's left menu.", false)));
+            bindBody.Children.Add(RichLine(("2.  Add a control and press your wheel button so SimHub detects it.", false)));
+            bindBody.Children.Add(RichLine(("3.  Assign it to ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (match N to the row number).", false)));
+            bindBody.Children.Add(RichLine(("4.  Pressing that button now sends the message.", false)));
+            HelpContainer.Children.Add(MakeFastExpander(
+                new TextBlock { Text = "Binding a button", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
+                bindBody, false));
+
+            // Webhooks example.
+            var webBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
+            webBody.Children.Add(RichLine(("Discord:", true), (" Server Settings → Integrations → Webhooks → New Webhook → Copy URL. Then Destinations → Discord → + Add destination → paste.", false)));
+            webBody.Children.Add(RichLine(("Custom webhook:", true), (" Destinations → Custom webhook → + Add destination → paste any endpoint URL → pick ", false), ("Body format", true), (" (JSON for Discord-style, Plain text for raw).", false)));
+            HelpContainer.Children.Add(MakeFastExpander(
+                new TextBlock { Text = "Webhooks — Discord & custom", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
+                webBody, false));
         }
 
         private static string TitleFor(Preset preset)

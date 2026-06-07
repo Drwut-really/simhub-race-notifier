@@ -79,6 +79,10 @@
                                            Text="Restart is occasionally needed so newly added message buttons become bindable under Controls and Events. Removing a message frees its button slot; the next new message reuses it and inherits any binding that slot already had." />
                             </StackPanel>
                         </styles:SHTabItem>
+
+                        <styles:SHTabItem Header="Help">
+                            <StackPanel x:Name="HelpContainer" Margin="4" />
+                        </styles:SHTabItem>
             </styles:SHTabControl>
         </StackPanel>
     </ScrollViewer>
