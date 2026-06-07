@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using RaceNotifier.Settings;
+using RaceNotifier.Telemetry;
 using SimHub.Plugins.Styles;
 
 namespace RaceNotifier.UI
@@ -318,6 +320,13 @@ namespace RaceNotifier.UI
                 MessagesContainer.Children.Add(BuildMessageRow(preset));
         }
 
+        /// <summary>One-line variables help built from the shared catalog (keeps UI and render in sync).</summary>
+        private static string VariableHelpText()
+        {
+            var list = string.Join("; ", VariableCatalog.Entries.Select(e => "{" + e.Token + "} = " + e.Description));
+            return "Variables — " + list + ". Filled in live when the message sends.";
+        }
+
         private static string TitleFor(Preset preset)
         {
             return string.IsNullOrWhiteSpace(preset.Name) ? ("Message " + preset.ActionIndex) : preset.Name;
@@ -418,7 +427,7 @@ namespace RaceNotifier.UI
             };
 
             // Name (optional)
-            body.Children.Add(new TextBlock { Text = "Name (optional)", Margin = new Thickness(0, 0, 0, 2) });
+            body.Children.Add(new TextBlock { Text = "Message name (optional)", Margin = new Thickness(0, 0, 0, 2) });
             var nameBox = new TextBox { Text = preset.Name ?? "", Width = 240, HorizontalAlignment = HorizontalAlignment.Left };
             nameBox.TextChanged += (s, e) =>
             {
@@ -429,7 +438,7 @@ namespace RaceNotifier.UI
             body.Children.Add(nameBox);
 
             // Message text
-            body.Children.Add(new TextBlock { Text = "Message text", Margin = new Thickness(0, 8, 0, 2) });
+            body.Children.Add(new TextBlock { Text = "Message", Margin = new Thickness(0, 8, 0, 2) });
             var textBox = new TextBox { Text = preset.Text ?? "", HorizontalAlignment = HorizontalAlignment.Stretch };
             textBox.TextChanged += (s, e) =>
             {
@@ -439,18 +448,16 @@ namespace RaceNotifier.UI
             };
             body.Children.Add(textBox);
 
-            // Variable hint — discoverable list of supported {tokens}.
-            body.Children.Add(new TextBlock
+            // Variables — native SimHub info block; its text is built from the shared catalog.
+            body.Children.Add(new SHInlineInfo
             {
-                Text = "Variables: {flag} — current track flag (e.g. Yellow, Green, Checkered; \"none\" when clear).",
-                Opacity = 0.8,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 2, 0, 0)
+                Text = VariableHelpText(),
+                Margin = new Thickness(0, 4, 0, 0)
             });
 
             // Cooldown
             var cdPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-            cdPanel.Children.Add(new TextBlock { Text = "Cooldown (s):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
+            cdPanel.Children.Add(new TextBlock { Text = "Cooldown — ignore repeat presses for", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
             var cdBox = new TextBox { Text = preset.CooldownSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture), Width = 60 };
             cdBox.TextChanged += (s, e) =>
             {
@@ -461,6 +468,7 @@ namespace RaceNotifier.UI
                 }
             };
             cdPanel.Children.Add(cdBox);
+            cdPanel.Children.Add(new TextBlock { Text = "seconds", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) });
             body.Children.Add(cdPanel);
 
             // Destination selection
