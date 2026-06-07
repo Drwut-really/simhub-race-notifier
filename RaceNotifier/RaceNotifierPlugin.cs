@@ -4,6 +4,7 @@ using System.Windows.Media;
 using GameReaderCommon;
 using RaceNotifier.Notifications;
 using RaceNotifier.Settings;
+using RaceNotifier.Telemetry;
 using RaceNotifier.UI;
 using SimHub.Plugins;
 
@@ -16,6 +17,13 @@ namespace RaceNotifier
     {
         public RaceNotifierSettings Settings;
         public NotificationDispatcher Dispatcher;
+
+        // Latest telemetry for message-variable substitution. Written on the SimHub data thread,
+        // read lock-free at send time; the value is an immutable snapshot swapped by reference.
+        private volatile TelemetrySnapshot _telemetry = TelemetrySnapshot.Empty;
+
+        /// <summary>Latest telemetry snapshot used to resolve message variables like {flag}.</summary>
+        public TelemetrySnapshot CurrentTelemetry => _telemetry;
 
         public PluginManager PluginManager { get; set; }
 
@@ -142,7 +150,14 @@ namespace RaceNotifier
 
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
-            // Not used in v1. Reserved for telemetry-enriched messages in a later version.
+            // Capture only what the message variables need. Runs ~60x/s, so allocate a new snapshot
+            // only when the value actually changes (the volatile swap is the thread-safe handoff).
+            bool running = data.GameRunning && data.NewData != null;
+            string flag = running ? (data.NewData.Flag_Name ?? "") : "";
+
+            var current = _telemetry;
+            if (current.GameRunning != running || current.FlagName != flag)
+                _telemetry = new TelemetrySnapshot(running, flag);
         }
 
         public Control GetWPFSettingsControl(PluginManager pluginManager)
