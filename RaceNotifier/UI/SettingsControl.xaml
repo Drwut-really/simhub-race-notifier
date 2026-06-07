@@ -50,8 +50,6 @@
                                                             Content="+ Add destination"
                                                             Margin="8,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
-                                <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Opacity="0.8"
-                                           Text="URLs are stored locally by SimHub and are never written to the project repository." />
                                 <StackPanel x:Name="DestinationsContainer" Margin="0,8,0,0" />
                             </StackPanel>
                         </styles:SHTabItem>
