@@ -439,6 +439,15 @@ namespace RaceNotifier.UI
             };
             body.Children.Add(textBox);
 
+            // Variable hint — discoverable list of supported {tokens}.
+            body.Children.Add(new TextBlock
+            {
+                Text = "Variables: {flag} — current track flag (e.g. Yellow, Green, Checkered; \"none\" when clear).",
+                Opacity = 0.8,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+
             // Cooldown
             var cdPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
             cdPanel.Children.Add(new TextBlock { Text = "Cooldown (s):", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) });
