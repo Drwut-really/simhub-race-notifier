@@ -9,10 +9,6 @@
              d:DesignWidth="760">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="8">
-            <!-- Description, directly under the page title -->
-            <TextBlock Text="Send preset messages to Discord or a custom webhook when you press a bound wheel button."
-                       TextWrapping="Wrap" Margin="0,0,0,8" />
-
             <!-- Master on/off switch -->
             <styles:SHToggleCheckbox x:Name="PluginEnabledCheck"
                                      Content="Plugin enabled"
@@ -61,22 +57,14 @@
 
                         <styles:SHTabItem Header="General">
                             <StackPanel Margin="4">
-                                <TextBlock TextWrapping="Wrap" Opacity="0.85" Margin="0,0,0,8"
-                                           Text="Binding: trigger a message in either of two ways. (1) Simple bind — on the Messages tab, click the bind button on the message's row and press your wheel button. (2) Controls &amp; Events — bind the input named RaceNotifierPlugin.SendMessageN under SimHub's Controls &amp; Events menu. Either way it fires on any press type." />
-                                <styles:SHSectionSeparator />
                                 <styles:SHToggleCheckbox x:Name="PrefixCheck"
                                                          Content="Prefix every message with my name" />
                                 <TextBlock Text="Sender name" Margin="0,8,0,2" />
                                 <TextBox x:Name="SenderNameBox" Width="260" HorizontalAlignment="Left" />
                                 <styles:SHSectionSeparator />
-                                <TextBlock TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Dashboard properties: RaceNotifierPlugin.LastSendStatus, RaceNotifierPlugin.LastSendMessage. Events: RaceNotifierPlugin.MessageSent, RaceNotifierPlugin.MessageFailed (bind to sounds/LEDs in SimHub)." />
-                                <styles:SHSectionSeparator />
                                 <styles:SHButtonPrimary x:Name="RestartButton"
                                                         HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Content="Restart SimHub" />
-                                <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Opacity="0.8"
-                                           Text="Restart is occasionally needed so newly added message buttons become bindable under Controls and Events. Removing a message frees its button slot; the next new message reuses it and inherits any binding that slot already had." />
                             </StackPanel>
                         </styles:SHTabItem>
 
