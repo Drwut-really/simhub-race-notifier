@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using RaceNotifier.Settings;
+using RaceNotifier.Telemetry;
 
 namespace RaceNotifier.Notifications
 {
@@ -16,6 +17,7 @@ namespace RaceNotifier.Notifications
     public class NotificationDispatcher : IDisposable
     {
         private readonly Func<RaceNotifierSettings> _getSettings;
+        private readonly Func<TelemetrySnapshot> _getTelemetry;
         private readonly Dictionary<DestinationType, INotifier> _notifiers;
         private readonly HttpClient _http;
         private readonly BlockingCollection<Job> _queue = new BlockingCollection<Job>(new ConcurrentQueue<Job>());
@@ -38,9 +40,10 @@ namespace RaceNotifier.Notifications
             public List<Destination> Destinations;
         }
 
-        public NotificationDispatcher(Func<RaceNotifierSettings> getSettings)
+        public NotificationDispatcher(Func<RaceNotifierSettings> getSettings, Func<TelemetrySnapshot> getTelemetry)
         {
             _getSettings = getSettings;
+            _getTelemetry = getTelemetry;
             _http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
             _notifiers = new Dictionary<DestinationType, INotifier>
             {
@@ -120,7 +123,8 @@ namespace RaceNotifier.Notifications
             }
 
             SimHub.Logging.Current.Info("[RaceNotifier]   -> enqueued message " + idx + " to " + targets.Count + " destination(s).");
-            _queue.Add(new Job { Message = ApplyPrefix(settings, preset.Text), Destinations = targets });
+            var rendered = MessageVariables.Render(preset.Text, Telemetry());
+            _queue.Add(new Job { Message = ApplyPrefix(settings, rendered), Destinations = targets });
         }
 
         /// <summary>
@@ -138,9 +142,16 @@ namespace RaceNotifier.Notifications
 
             _queue.Add(new Job
             {
-                Message = ApplyPrefix(settings, message),
+                Message = ApplyPrefix(settings, MessageVariables.Render(message, Telemetry())),
                 Destinations = new List<Destination> { destination }
             });
+        }
+
+        /// <summary>Latest telemetry snapshot, never null even if the accessor is missing or throws.</summary>
+        private TelemetrySnapshot Telemetry()
+        {
+            try { return _getTelemetry?.Invoke() ?? TelemetrySnapshot.Empty; }
+            catch { return TelemetrySnapshot.Empty; }
         }
 
         private static string ApplyPrefix(RaceNotifierSettings settings, string text)

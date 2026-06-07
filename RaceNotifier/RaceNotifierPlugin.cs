@@ -57,7 +57,7 @@ namespace RaceNotifier
             Settings = this.ReadCommonSettings<RaceNotifierSettings>("GeneralSettings", () => new RaceNotifierSettings());
             Settings.EnsureInitialized();
 
-            Dispatcher = new NotificationDispatcher(() => Settings);
+            Dispatcher = new NotificationDispatcher(() => Settings, () => CurrentTelemetry);
             Dispatcher.OnSent = msg => this.TriggerEvent("MessageSent");
             Dispatcher.OnFailed = msg => this.TriggerEvent("MessageFailed");
 
