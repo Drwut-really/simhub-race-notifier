@@ -328,8 +328,6 @@ namespace RaceNotifier.UI
             return "Variables — " + list + ". Filled in live when the message sends.";
         }
 
-        private static readonly Duration FastAnim = new Duration(TimeSpan.FromMilliseconds(80));
-
         /// <summary>A TextBlock built from alternating (text, bold) segments — for readable help copy.</summary>
         private static TextBlock RichLine(params ValueTuple<string, bool>[] segments)
         {
@@ -342,8 +340,10 @@ namespace RaceNotifier.UI
 
         /// <summary>
         /// A fast collapsible section: an always-visible clickable header (chevron + supplied header)
-        /// over a body that reveals with a quick ~80ms animation via SHContentExpander. onToggle(bool)
-        /// fires when the open state changes.
+        /// over a body that shows/hides instantly via Visibility (no layout gap when collapsed).
+        /// onToggle(bool) fires when the open state changes. (We do NOT use SHContentExpander — it does
+        /// not reveal its Content when IsExpanded is toggled imperatively. The click pattern below is the
+        /// same proven Transparent-background + MouseLeftButtonUp used by the reorder arrows.)
         /// </summary>
         private UIElement MakeFastExpander(UIElement header, UIElement body, bool startExpanded, Action<bool> onToggle = null)
         {
@@ -355,15 +355,7 @@ namespace RaceNotifier.UI
                 Opacity = 0.8
             };
 
-            var content = new SHContentExpander
-            {
-                Content = body,
-                IsExpanded = startExpanded,
-                // Fully qualified: ExpandDirection also exists in System.Windows.Controls (ambiguous);
-                // SimHub's enum only has Horizontal/Vertical.
-                ExpandDirection = SimHub.Plugins.Styles.ExpandDirection.Vertical,
-                AnimationDuration = FastAnim
-            };
+            body.Visibility = startExpanded ? Visibility.Visible : Visibility.Collapsed;
 
             var headerRow = new StackPanel
             {
@@ -375,14 +367,15 @@ namespace RaceNotifier.UI
             headerRow.Children.Add(header);
             headerRow.MouseLeftButtonUp += (s, e) =>
             {
-                content.IsExpanded = !content.IsExpanded;
-                chevron.Text = content.IsExpanded ? "▾" : "▸";
-                onToggle?.Invoke(content.IsExpanded);
+                bool open = body.Visibility != Visibility.Visible;
+                body.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+                chevron.Text = open ? "▾" : "▸";
+                onToggle?.Invoke(open);
             };
 
             var holder = new StackPanel { Margin = new Thickness(0, 2, 0, 0) };
             holder.Children.Add(headerRow);
-            holder.Children.Add(content);
+            holder.Children.Add(body);
             return holder;
         }
 
