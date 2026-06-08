@@ -443,7 +443,7 @@ namespace RaceNotifier.UI
 
             // Binding example.
             var bindBody = new StackPanel { Margin = new Thickness(20, 4, 4, 8) };
-            bindBody.Children.Add(RichLine(("Each message is a bindable input ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (N = the number on the message's row). It fires on a plain press.", false)));
+            bindBody.Children.Add(RichLine(("Each message is a bindable action ", false), ("RaceNotifierPlugin.SendMessageN", true), (" (N = the number on the message's row). Bind it to a button; SimHub press types (Short / Long / Short-and-long) apply.", false)));
             bindBody.Children.Add(RichLine(("1.  Expand the message on the ", false), ("Messages", true), (" tab.", false)));
             bindBody.Children.Add(RichLine(("2.  Under ", false), ("Bind button", true), (", click the box.", false)));
             bindBody.Children.Add(RichLine(("3.  Press the wheel/controller button you want.", false)));
