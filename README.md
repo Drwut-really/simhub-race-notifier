@@ -9,7 +9,7 @@ Race Notifier lets you press a button on your wheel and send a preset message to
 
 You do not need Visual Studio or any developer tools for this.
 
-1. Download `RaceNotifier-v0.2.0.zip` from the [latest release](../../releases/latest).
+1. Download `RaceNotifier-v0.1.5.zip` from the [latest release](../../releases/latest).
 2. Open the zip file.
 3. Copy `RaceNotifier.dll` into your SimHub folder:
    `C:\Program Files (x86)\SimHub\`
@@ -70,7 +70,7 @@ Press your bound wheel button. The message posts to your Discord channel.
 > [!IMPORTANT]
 > **Upgrading from an older version? Re-bind your buttons.**
 >
-> Version v0.2.0 changed how Race Notifier connects buttons to SimHub. Because of that, SimHub forgets old Race Notifier button assignments.
+> Version v0.1.5 changed how Race Notifier connects buttons to SimHub. Because of that, SimHub forgets old Race Notifier button assignments.
 >
 > You only need to fix this once. Click each message's bind button and press your wheel button again. You can also do the same thing in SimHub's **Controls & Events** screen.
 
