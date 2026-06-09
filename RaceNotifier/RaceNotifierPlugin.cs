@@ -77,28 +77,30 @@ namespace RaceNotifier
                 RegisterAction(i);
             HighestRegisteredActionIndex = ceiling;
 
-            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable inputs as '"
+            SimHub.Logging.Current.Info("[RaceNotifier] Registered " + ceiling + " bindable actions as '"
                 + ActionPrefix + ".SendMessage1.." + ceiling + "'. " + Settings.Presets.Count
                 + " message(s) configured, PluginEnabled=" + Settings.PluginEnabled
-                + ". Bind a wheel button to one of those (raw press; SimHub press type does not apply to inputs).");
+                + ". Bind a wheel button to one of those under Controls & Events; SimHub press types (Short/Long/Short-and-long) apply.");
         }
 
         /// <summary>
-        /// Registers the bindable SimHub INPUT for one slot index. Only the press fires the
-        /// message; the release is an intentional no-op. Because this is an input mapping (not an
-        /// Action), it fires on a raw button press and SimHub/ControlMapper "press type"
-        /// (ShortPress, ShortAndLongPress, …) does not apply.
+        /// Registers the bindable SimHub ACTION for one slot index. Fires the message on
+        /// actionStart — the press-type-aware callback — so SimHub's native press types
+        /// (Short / Long / Short-and-long, chosen per binding in Controls &amp; Events) are honored.
+        /// actionEnd (release) is an intentional no-op.
         /// </summary>
         private void RegisterAction(int idx)
         {
             int captured = idx; // capture for the closure
-            // INPUT MAPPING (raw pressed/released), NOT an Action. Input mappings fire on a plain
-            // button press and are NOT subject to SimHub's "press type" system (the trap where a
-            // binding left on "Short and long press" silently never fires a normal Action).
-            this.AddInputMapping(
-                inputName: "SendMessage" + captured,
-                inputPressed: (a, b) => Dispatcher.FireByActionIndex(captured, "press"),
-                inputReleased: (a, b) => { });
+            // SimHub ACTION (not an input mapping): actions are processed by SimHub's press-type
+            // system, so a binding set to "Long press" fires only after the hold threshold, etc.
+            // Fire on actionStart so the configured press type is honored; release is a no-op.
+            // (Do NOT use the AddAction pressFallback overload — it fires on every plain press
+            // regardless of the configured press type, which would defeat press-type filtering.)
+            this.AddAction(
+                actionName: "SendMessage" + captured,
+                actionStart: (a, b) => Dispatcher.FireByActionIndex(captured, "press"),
+                actionEnd: (a, b) => { });
         }
 
         /// <summary>

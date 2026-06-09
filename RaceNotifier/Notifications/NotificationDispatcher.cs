@@ -59,8 +59,8 @@ namespace RaceNotifier.Notifications
         }
 
         /// <summary>
-        /// Called from the SimHub input callback. <paramref name="idx"/> is the preset's ActionIndex.
-        /// <paramref name="phase"/> is "press" today (the input mapping's release is a no-op); it is
+        /// Called from the SimHub action callback. <paramref name="idx"/> is the preset's ActionIndex.
+        /// <paramref name="phase"/> is "press" today (the action's release / actionEnd is a no-op); it is
         /// included for logging. The per-preset cooldown below guards against rapid repeat presses.
         /// </summary>
         public void FireByActionIndex(int idx, string phase = "press")
