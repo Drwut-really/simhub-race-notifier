@@ -16,9 +16,6 @@ You do not need Visual Studio or any developer tools for this.
 4. Restart SimHub.
 5. When SimHub asks, enable **Race Notifier**.
 
-<!-- Screenshot: SimHub plugins list or enable toggle for Race Notifier -->
-![Race Notifier enable toggle in SimHub](docs/images/02-enable-plugin.png)
-
 ## Quick Start
 
 ### 1. Add Your Discord Destination
