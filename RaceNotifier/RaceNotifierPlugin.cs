@@ -27,7 +27,7 @@ namespace RaceNotifier
 
         public PluginManager PluginManager { get; set; }
 
-        public ImageSource PictureIcon => null;
+        public ImageSource PictureIcon => UI.PluginIcon.Default;
 
         public string LeftMenuTitle => "Race Notifier";
 
@@ -52,7 +52,7 @@ namespace RaceNotifier
 
         public void Init(PluginManager pluginManager)
         {
-            SimHub.Logging.Current.Info("[RaceNotifier] Starting plugin");
+            SimHub.Logging.Current.Info("[RaceNotifier] Starting plugin v0.1.5");
 
             Settings = this.ReadCommonSettings<RaceNotifierSettings>("GeneralSettings", () => new RaceNotifierSettings());
             Settings.EnsureInitialized();
