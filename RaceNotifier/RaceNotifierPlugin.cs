@@ -52,7 +52,7 @@ namespace RaceNotifier
 
         public void Init(PluginManager pluginManager)
         {
-            SimHub.Logging.Current.Info("[RaceNotifier] Starting plugin v0.1.5");
+            SimHub.Logging.Current.Info("[RaceNotifier] Starting plugin v0.1.5a");
 
             Settings = this.ReadCommonSettings<RaceNotifierSettings>("GeneralSettings", () => new RaceNotifierSettings());
             Settings.EnsureInitialized();

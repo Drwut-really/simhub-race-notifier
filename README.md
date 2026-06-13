@@ -9,7 +9,7 @@ Race Notifier lets you press a button on your wheel and send a preset message to
 
 You do not need Visual Studio or any developer tools for this.
 
-1. Download `RaceNotifier-v0.1.5.zip` from the [latest release](../../releases/latest).
+1. Download `RaceNotifier-v0.1.5a.zip` from the [latest release](../../releases/latest).
 2. Open the zip file.
 3. Copy `RaceNotifier.dll` into your SimHub folder:
    `C:\Program Files (x86)\SimHub\`
